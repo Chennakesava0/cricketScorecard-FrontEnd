@@ -62,7 +62,9 @@ function Dashboard() {
                 </div>
 
                 <div className="col-md-6">
-                    <div className="card dashboard-card shadow">
+                    <div className="card dashboard-card shadow"
+                     onClick={() => navigate("/livescore/:matchId")}
+                    >
                         <div className="card-body text-center">
                             <h5>Live Matches</h5>
                             <h2>{data.liveMatches}</h2>
