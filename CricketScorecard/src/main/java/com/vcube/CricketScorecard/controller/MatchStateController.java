@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,8 +25,21 @@ public class MatchStateController {
 		return matchStateService.startMatch(dto);
 	}
 	
-	@GetMapping("/{matchId}")
+	@GetMapping("/matchState/{matchId}")
 	public MatchState getMatchState(@PathVariable Integer matchId) {
 		return matchStateService.getMatchState(matchId);
+	}
+	
+	@PutMapping("/updatePlayers/{matchId}")
+	public MatchState updatePlayers(
+	        @PathVariable Integer matchId,
+	        @RequestBody MatchState state){
+
+	    return matchStateService.updateCurrentPlayers(
+	            matchId,
+	            state.getStrikerId(),
+	            state.getNonStrikerId(),
+	            state.getCurrentBowlerId()
+	    );
 	}
 }

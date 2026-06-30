@@ -49,10 +49,25 @@ public class MatchController {
 		return "Match Deleted Successfully";
 
 	}
+	
+	@GetMapping("/getTotalMatches")
+	public long getTotalMatches() {
+	    return matchService.getTotalMatches();
+	}
+	
+	@GetMapping("/getUpcomingMatches")
+	public List<Match> getUpcomingMatches() {
+	    return matchService.getUpcomingMatches();
+	}
+
+	@GetMapping("/getLiveMatches")
+	public List<Match> getLiveMatches() {
+	    return matchService.getLiveMatches();
+	}
 
 	@GetMapping("/getCompletedMatches")
 	public List<Match> getCompletedMatches() {
-		return matchService.getCompletedMatches();
+	    return matchService.getCompletedMatches();
 	}
 
 }

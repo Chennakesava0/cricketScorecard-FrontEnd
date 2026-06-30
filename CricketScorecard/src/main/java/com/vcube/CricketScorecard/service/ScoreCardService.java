@@ -12,10 +12,13 @@ import com.vcube.CricketScorecard.dto.BattingscorecardDTO;
 import com.vcube.CricketScorecard.dto.BowlingScorecardDTO;
 import com.vcube.CricketScorecard.dto.LiveScoreDTO;
 import com.vcube.CricketScorecard.dto.MatchResultDTO;
+import com.vcube.CricketScorecard.enums.BallType;
 import com.vcube.CricketScorecard.model.BallScore;
 import com.vcube.CricketScorecard.model.Match;
+import com.vcube.CricketScorecard.model.MatchState;
 import com.vcube.CricketScorecard.repository.BallScoreRepository;
 import com.vcube.CricketScorecard.repository.MatchRepository;
+import com.vcube.CricketScorecard.repository.MatchStateRepository;
 
 @Service
 public class ScoreCardService {
@@ -24,13 +27,22 @@ public class ScoreCardService {
 	BallScoreRepository ballScoreRepository;
 	
 	@Autowired
+	private MatchStateRepository matchStateRepository;
+	
+	@Autowired
 	MatchRepository matchRepository;
 	
 	public LiveScoreDTO getLiveScore(Integer matchId,
 			                         Integer target,
 			                         Integer totalOvers) {
+		
+		MatchState state =
+			    matchStateRepository.findByMatchMatchId(matchId)
+			        .orElseThrow();
+		
 		List<BallScore> ballss = 
 				ballScoreRepository.findByMatch_MatchIdOrderByOverNoAscBallNoAsc(matchId);
+		
 		
 		LiveScoreDTO dto = new LiveScoreDTO();
 		
@@ -40,8 +52,10 @@ public class ScoreCardService {
 		
 		for(BallScore ball : ballss) {
 			
-			totalRuns += ball.getRuns();
-			totalRuns += ball.getExtras();
+			int runs = ball.getRuns() == null ? 0 : ball.getRuns();
+			int extras = ball.getExtras() == null ? 0 : ball.getExtras();
+
+			totalRuns += runs + extras;
 			
 			if(ball.getWicketType() !=null
 					&& ! ball.getWicketType().name().equals("NOT_OUT")) {
@@ -49,11 +63,11 @@ public class ScoreCardService {
 				wickets++;
 			}
 			
-			if(ball.getBallType().name().equals("NORMAL")
-					|| ball.getBallType().name().equals("BYE")
-					|| ball.getBallType().name().equals("LEG_BYE")) {
-				
-				legalBalls++;
+			if(ball.getBallType() == BallType.NORMAL
+			        || ball.getBallType() == BallType.BYE
+			        || ball.getBallType() == BallType.LEG_BYE) {
+
+			    legalBalls++;
 			}
 		}
 		
@@ -63,9 +77,39 @@ public class ScoreCardService {
 		double currentRunRate =
 				legalBalls == 0 ? 0:(totalRuns * 6.0)/legalBalls;
 		
-		dto.setTotalRuns(totalRuns);
-		dto.setTotalWickets(wickets);
-		dto.setOvers(overs + "." + balls);
+		if(state.getInnings() == 2) {
+
+		    dto.setInnings(2);
+
+		    dto.setFirstInningsRuns(state.getFirstInningsRuns());
+		    dto.setFirstInningsWickets(state.getFirstInningsWickets());
+
+		    dto.setTotalRuns(state.getTotalRuns());
+		    dto.setTotalWickets(state.getWickets());
+
+		    dto.setTarget(state.getTarget());
+
+		    // First innings overs
+		    int firstBalls = state.getFirstInningsBalls() == null
+		            ? 0
+		            : state.getFirstInningsBalls();
+
+		    dto.setFirstInningsOvers(
+		            (firstBalls / 6) + "." + (firstBalls % 6)
+		    );
+
+		    // Second innings overs
+		    int secondBalls = state.getTotalBalls() == null
+		            ? 0
+		            : state.getTotalBalls();
+
+		    dto.setSecondInningsOvers(
+		            (secondBalls / 6) + "." + (secondBalls % 6)
+		    );
+
+		    dto.setOvers(dto.getSecondInningsOvers());
+		}
+		
 		dto.setCurrentRunRate(
 				Math.round(currentRunRate * 100.0)/100.0);
 		
@@ -74,7 +118,7 @@ public class ScoreCardService {
 		if(target != null) {
 			int totalBalls = totalOvers *6;
 			int ballsRemaining = totalBalls - legalBalls;
-			int runsRequired = target - totalRuns;
+			int runsRequired = Math.max(target - totalRuns, 0);
 			
 			double requiredRunRate = 0;
 			
@@ -152,9 +196,9 @@ public class ScoreCardService {
 		                        + ball.getRuns());
 
 		        // Balls Faced
-		        if (ball.getBallType().name().equals("NORMAL")
-		                || ball.getBallType().name().equals("BYE")
-		                || ball.getBallType().name().equals("LEG_BYE")) {
+		        if ( ball.getBallType() == BallType.NORMAL
+		                || ball.getBallType() == BallType.BYE
+		                || ball.getBallType() == BallType.LEG_BYE ) {
 
 		            dto.setBalls(
 		                    (dto.getBalls() == null ? 0 : dto.getBalls()) + 1);
@@ -221,23 +265,29 @@ public class ScoreCardService {
 		        dto.setPlayerName(ball.getBowler().getPlayerName());
 
 		        // Runs Conceded
+		        int runs = ball.getRuns() == null ? 0 : ball.getRuns();
+		        int extras = ball.getExtras() == null ? 0 : ball.getExtras();
+
 		        dto.setRunsConceded(
-		                (dto.getRunsConceded() == null ? 0 : dto.getRunsConceded())
-		                        + ball.getRuns()
-		                        + ball.getExtras());
+		            (dto.getRunsConceded() == null ? 0 : dto.getRunsConceded())
+		                + runs + extras
+		        );
 
 		        // Wickets
+		     // Wickets (Run Out should NOT count for bowler)
 		        if (ball.getWicketType() != null
-		                && !ball.getWicketType().name().equals("NOT_OUT")) {
+		                && !ball.getWicketType().name().equals("NOT_OUT")
+		                && !ball.getWicketType().name().equals("RUN_OUT")
+		                && !ball.getWicketType().name().equals("RUN_OUT_NON_STRIKER")) {
 
 		            dto.setWickets(
 		                    (dto.getWickets() == null ? 0 : dto.getWickets()) + 1);
 		        }
-
+		        
 		        // Legal Balls
-		        if (ball.getBallType().name().equals("NORMAL")
-		                || ball.getBallType().name().equals("BYE")
-		                || ball.getBallType().name().equals("LEG_BYE")) {
+		        if (ball.getBallType() == BallType.NORMAL
+		                || ball.getBallType() == BallType.BYE
+		                || ball.getBallType() == BallType.LEG_BYE) {
 
 		            legalBallsMap.put(
 		                    bowlerId,

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.vcube.CricketScorecard.enums.BallType;
 import com.vcube.CricketScorecard.enums.MatchStatus;
+import com.vcube.CricketScorecard.enums.WicketType;
 import com.vcube.CricketScorecard.model.BallScore;
 import com.vcube.CricketScorecard.model.Match;
 import com.vcube.CricketScorecard.model.MatchState;
@@ -25,22 +26,37 @@ public class BallScoreService {
 
     @Autowired
     private MatchRepository matchRepository;
+    
+    private boolean isLegalBall(BallScore ball) {
+	    return ball.getBallType() != BallType.WIDE
+	            && ball.getBallType() != BallType.NO_BALL;
+	}
 
-    public BallScore saveBallScore(BallScore ballScore) {
+    	public BallScore saveBallScore(BallScore ballScore) {
+    		
+    		 System.err.println(">>>>>>>> saveBallScore() CALLED <<<<<<<<");
+    		
+    	    MatchState state = matchStateRepository
+    	            .findByMatchMatchId(
+    	                    ballScore.getMatch().getMatchId())
+    	            .orElseThrow(() ->
+    	                    new RuntimeException("Match State Not Found"));
 
-        BallScore savedBall = ballScoreRepository.save(ballScore);
+    	    int totalBalls = state.getTotalBalls() == null
+    	            ? 0
+    	            : state.getTotalBalls();
 
-        MatchState state = matchStateRepository
-                .findByMatchMatchId(
-                        ballScore.getMatch().getMatchId())
-                .orElseThrow(() ->
-                        new RuntimeException("Match State Not Found"));
+    	    
+    	    ballScore.setOverNo(totalBalls / 6);
+    	    ballScore.setBallNo((totalBalls % 6) + 1);
 
-        updateMatchState(savedBall, state);
+    	    BallScore savedBall =
+    	            ballScoreRepository.save(ballScore);
 
-        return savedBall;
-    }
+    	    updateMatchState(savedBall, state);
 
+    	    return savedBall;
+    	}
     private void updateMatchState(
             BallScore ball,
             MatchState state) {
@@ -49,20 +65,25 @@ public class BallScoreService {
     	int wickets = state.getWickets() == null ? 0 : state.getWickets();
     	int balls = state.getTotalBalls() == null ? 0 : state.getTotalBalls();
     	
-        runs += ball.getRuns();
+    	if (ball.getBallType() == BallType.WIDE
+    	        || ball.getBallType() == BallType.NO_BALL
+    	        || ball.getBallType() == BallType.LEG_BYE) {
 
-        if (ball.getExtras() != null) {
-            runs += ball.getExtras();
-        }
+    	    runs += ball.getExtras() == null
+    	            ? 0
+    	            : ball.getExtras();
 
-        if (ball.getWicketType() != null) {
-            wickets++;
-        }
+    	} else {
 
-        boolean legalBall =
-                ball.getBallType() != BallType.WIDE
-                && ball.getBallType() != BallType.NO_BALL;
+    	    runs += ball.getRuns();
+    	}
 
+    	if (ball.getWicketType() != null
+    	        && ball.getWicketType() != WicketType.NOT_OUT) {
+    	    wickets++;
+    	}
+
+        boolean legalBall = isLegalBall(ball);
         if (legalBall) {
             balls++;
         }
@@ -70,8 +91,20 @@ public class BallScoreService {
         state.setTotalRuns(runs);
         state.setWickets(wickets);
         state.setTotalBalls(balls);
+        
+        
+        if (state.getInnings() == 2) {
 
-        swapStrike(ball, state);
+            state.setSecondInningsRuns(runs);
+            state.setSecondInningsWickets(wickets);
+            state.setSecondInningsBalls(balls);
+        }
+        
+        System.err.println("SECOND INNINGS RUNS = " + state.getSecondInningsRuns());
+        
+        if (ball.getWicketType() != WicketType.RUN_OUT_NON_STRIKER) {
+            swapStrike(ball, state);
+        }
 
         endOverLogic(state);
 
@@ -86,17 +119,22 @@ public class BallScoreService {
             BallScore ball,
             MatchState state) {
 
-        if (ball.getRuns() % 2 == 1) {
+        int strikeRuns = 0;
+
+        if (ball.getBallType() == BallType.LEG_BYE) {
+            strikeRuns = ball.getExtras() == null ? 0 : ball.getExtras();
+        } else {
+            strikeRuns = ball.getRuns() == null ? 0 : ball.getRuns();
+        }
+
+        if (strikeRuns % 2 == 1) {
 
             Integer striker = state.getStrikerId();
 
-            state.setStrikerId(
-                    state.getNonStrikerId());
-
+            state.setStrikerId(state.getNonStrikerId());
             state.setNonStrikerId(striker);
         }
     }
-
     private void endOverLogic(
             MatchState state) {
 
@@ -105,13 +143,13 @@ public class BallScoreService {
 
             Integer striker = state.getStrikerId();
 
-            state.setStrikerId(
-                    state.getNonStrikerId());
-
+            state.setStrikerId(state.getNonStrikerId());
             state.setNonStrikerId(striker);
+
+            // Force new bowler selection
+            state.setCurrentBowlerId(null);
         }
     }
-
     private void secondInningsLogic(
             MatchState state) {
 
@@ -129,24 +167,28 @@ public class BallScoreService {
                 || state.getTotalBalls()
                 >= totalMatchBalls;
 
-        if (inningsFinished) {
+                if (inningsFinished) {
 
-            state.setFirstInningsRuns(
-                    state.getTotalRuns());
+                    // 🔥 TAKE SNAPSHOT BEFORE RESET
+                	int firstInningsScore = state.getTotalRuns();
 
-            state.setTarget(
-                    state.getTotalRuns() + 1);
+                	state.setFirstInningsRuns(firstInningsScore);
+                	state.setFirstInningsWickets(state.getWickets());
+                	state.setFirstInningsBalls(state.getTotalBalls());
 
-            state.setInnings(2);
+                	// target = first innings + 1
+                	state.setTarget(firstInningsScore + 1);
 
-            state.setTotalRuns(0);
-            state.setWickets(0);
-            state.setTotalBalls(0);
+                    state.setInnings(2);
 
-            state.setStrikerId(null);
-            state.setNonStrikerId(null);
-            state.setCurrentBowlerId(null);
-        }
+                    state.setTotalRuns(0);
+                    state.setWickets(0);
+                    state.setTotalBalls(0);
+
+                    state.setStrikerId(null);
+                    state.setNonStrikerId(null);
+                    state.setCurrentBowlerId(null);
+                }
     }
 
     private void matchResultLogic(
@@ -162,14 +204,16 @@ public class BallScoreService {
                 match.getTotalOvers() * 6;
 
         if (state.getTarget() != null
-                && state.getTotalRuns()
-                >= state.getTarget()) {
+                && state.getTotalRuns() != null
+                && state.getTotalRuns() >= state.getTarget()) {
+        	
+        	state.setSecondInningsRuns(state.getTotalRuns());
+            state.setSecondInningsWickets(state.getWickets());
+            state.setSecondInningsBalls(state.getTotalBalls());
 
-            match.setStatus(
-                    MatchStatus.COMPLETED);
-
+            match.setStatus(MatchStatus.COMPLETED);
             matchRepository.save(match);
-
+            matchStateRepository.save(state);
             return;
         }
 
@@ -179,11 +223,16 @@ public class BallScoreService {
                 >= totalMatchBalls;
 
         if (inningsFinished) {
+        	
+        	state.setSecondInningsRuns(state.getTotalRuns());
+            state.setSecondInningsWickets(state.getWickets());
+            state.setSecondInningsBalls(state.getTotalBalls());
 
             match.setStatus(
                     MatchStatus.COMPLETED);
 
             matchRepository.save(match);
+            matchStateRepository.save(state);
         }
     }
 

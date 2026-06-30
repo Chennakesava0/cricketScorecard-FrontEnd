@@ -7,9 +7,11 @@ public class StartMatchDTO {
 
 	private Integer matchId;
 	
-	private Integer strikerId;
+	    private Integer strikerId;
+
+	    private Integer nonStrikerId;
+
+	    private Integer bowlerId;
 	
-	private Integer nonStrikerId;
 	
-	private Integer currentBowlerId;
 }

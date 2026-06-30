@@ -34,6 +34,7 @@ public class MatchService {
 		match.setTeam1(updateMatch.getTeam1());
 		match.setTeam2(updateMatch.getTeam2());
 		match.setMatchDate(updateMatch.getMatchDate());
+		match.setMatchTime(updateMatch.getMatchTime());
 		match.setVenue(updateMatch.getVenue());
 		match.setTotalOvers(updateMatch.getTotalOvers());
 		 match.setTarget(updateMatch.getTarget()); 
@@ -50,6 +51,19 @@ public class MatchService {
 		matchRepository.deleteById(id);
 	}
 	
+	
+	public long getTotalMatches() {
+	    return matchRepository.count();
+	}
+	
+	public List<Match> getUpcomingMatches() {
+	    return matchRepository.findByStatus(MatchStatus.UPCOMING);
+	}
+
+	public List<Match> getLiveMatches() {
+	    return matchRepository.findByStatus(MatchStatus.LIVE);
+	}
+
 	public List<Match> getCompletedMatches() {
 	    return matchRepository.findByStatus(MatchStatus.COMPLETED);
 	}

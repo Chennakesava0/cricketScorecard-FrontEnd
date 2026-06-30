@@ -13,6 +13,7 @@ import com.vcube.CricketScorecard.dto.BattingscorecardDTO;
 import com.vcube.CricketScorecard.dto.BowlingScorecardDTO;
 import com.vcube.CricketScorecard.dto.LiveScoreDTO;
 import com.vcube.CricketScorecard.dto.MatchResultDTO;
+import com.vcube.CricketScorecard.service.LiveScoreService;
 import com.vcube.CricketScorecard.service.ScoreCardService;
 
 @RestController
@@ -21,17 +22,14 @@ public class ScoreCardController {
 
     @Autowired
     private ScoreCardService scoreCardService;
+    
+    @Autowired
+    private LiveScoreService liveScoreService;
 
     @GetMapping("/liveScore/{matchId}")
-    public LiveScoreDTO getLiveScore(
-            @PathVariable Integer matchId,
-            @RequestParam(required = false) Integer target,
-            @RequestParam(required = false) Integer totalOvers) {
+    public LiveScoreDTO getLiveScore(@PathVariable Integer matchId) {
 
-        return scoreCardService.getLiveScore(
-                matchId,
-                target,
-                totalOvers);
+        return liveScoreService.getLiveScore(matchId);
     }
 
     @GetMapping("/battingScorecard/{matchId}")

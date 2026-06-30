@@ -38,6 +38,16 @@ public class MatchState {
     
     private Integer firstInningsRuns;
     
+    private Integer firstInningsWickets;
+    
+    private Integer firstInningsBalls;
+
+    private Integer secondInningsRuns;
+    
+    private Integer secondInningsWickets;
+    
+    private Integer secondInningsBalls;
+    
     private Boolean matchCompleted= false;;
 
     private Integer target;

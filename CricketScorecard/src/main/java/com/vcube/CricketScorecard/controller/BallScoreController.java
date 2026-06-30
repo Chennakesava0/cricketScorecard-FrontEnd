@@ -22,7 +22,7 @@ public class BallScoreController {
 	@Autowired
 	BallScoreService ballScoreService;
 	
-	@PostMapping("/saveBallScore")
+	@PostMapping("/scoreBall")
 	public BallScore saveBallScore(@RequestBody BallScore ballScore) {
 		return ballScoreService.saveBallScore(ballScore);
 	}

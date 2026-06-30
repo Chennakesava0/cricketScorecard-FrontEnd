@@ -40,6 +40,8 @@ public class Match {
 	
 	private LocalDate matchDate;
 	
+	private String matchTime;
+	
 	private String venue;
 	
 	private Integer totalOvers;

@@ -35,19 +35,18 @@ public class MatchStateService {
 	    MatchState state = new MatchState();
 
 	    state.setMatch(match);
-	    state.setStrikerId(dto.getStrikerId());
-	    state.setNonStrikerId(dto.getNonStrikerId());
-	    state.setCurrentBowlerId(dto.getCurrentBowlerId());
+	    
 
+	    state.setStrikerId(dto.getStrikerId());         
+	    state.setNonStrikerId(dto.getNonStrikerId());   
+	    state.setCurrentBowlerId(dto.getBowlerId());    
 	    state.setTotalRuns(0);
 	    state.setWickets(0);
 	    state.setTotalBalls(0);
-
 	    state.setInnings(1);
-
 	    state.setFirstInningsRuns(0);
+	    state.setFirstInningsWickets(0);
 	    state.setTarget(0);
-
 	    state.setMatchCompleted(false);
 
 	    MatchState savedState = matchStateRepository.save(state);
@@ -62,5 +61,22 @@ public class MatchStateService {
 		
 		return matchStateRepository.findByMatchMatchId(matchId)
 				.orElseThrow(() -> new RuntimeException("Match State Not Found"));
+	}
+	
+	public MatchState updateCurrentPlayers(
+	        Integer matchId,
+	        Integer strikerId,
+	        Integer nonStrikerId,
+	        Integer bowlerId) {
+
+	    MatchState state = matchStateRepository
+	            .findByMatchMatchId(matchId)
+	            .orElseThrow(() -> new RuntimeException("Match State Not Found"));
+
+	    state.setStrikerId(strikerId);
+	    state.setNonStrikerId(nonStrikerId);
+	    state.setCurrentBowlerId(bowlerId);
+
+	    return matchStateRepository.save(state);
 	}
 }
