@@ -496,6 +496,8 @@ public class BallScoreService {
         }
     }
     
+    //GetOutPalyers 
+    
     public List<Integer> getOutPlayers(Integer matchId, Integer innings) {
 
         List<BallScore> balls =
