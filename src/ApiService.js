@@ -111,17 +111,30 @@ class ApiService {
     }
 
     updateCurrentPlayers(matchId, data) {
-    return axios.put(
-        `${BASE_URL}/updatePlayers/${matchId}`,
-        data
-    );
-}
+        return axios.put(
+            `${BASE_URL}/updatePlayers/${matchId}`,
+            data
+        );
+    }
+
+    getOutPlayers(matchId, innings) {
+        return axios.get(
+            `${BASE_URL}/outPlayers/${matchId}/${innings}`
+        );
+    }
 
     // Live Score
 
     getLiveScore(matchId) {
         return axios.get(
             `${BASE_URL}/liveScore/${matchId}`
+        );
+    }
+
+
+    getBallScoreByMatchAndInnings(matchId, innings) {
+        return axios.get(
+            `${BASE_URL}/getBallScoreByMatchAndInnings/${matchId}/${innings}`
         );
     }
 
@@ -132,13 +145,22 @@ class ApiService {
         );
     }
 
-
-    getBatting(matchId) {
-        return axios.get(`${BASE_URL}/battingScorecard/${matchId}`)
+    getBattingScorecard(matchId, teamId, innings) {
+        return axios.get(
+            `${BASE_URL}/battingScorecard/${matchId}?teamId=${teamId}&innings=${innings}`
+        );
     }
 
-    getBowling(matchId) {
-        return axios.get(`${BASE_URL}/bowlingScorecard/${matchId}`)
+    getBowlingScorecard(matchId, teamId, innings) {
+        return axios.get(
+            `${BASE_URL}/bowlingScorecard/${matchId}?teamId=${teamId}&innings=${innings}`
+        );
+    }
+
+    getTeamScorecard(matchId, teamId) {
+        return axios.get(
+            `${BASE_URL}/teamScorecard/${matchId}?teamId=${teamId}`
+        );
     }
 
     getResult(matchId) {

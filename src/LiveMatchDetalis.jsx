@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ApiService from "./ApiService";
+import Scorecard from "./Scorecard";
 
 function LiveMatchDetails() {
 
@@ -9,6 +10,23 @@ function LiveMatchDetails() {
 
     const [match, setMatch] = useState(null);
     const [liveScore, setLiveScore] = useState(null);
+
+    const [visibleOvers, setVisibleOvers] = useState([]);
+    const [autoScroll, setAutoScroll] = useState(true);
+    const [showAllOvers, setShowAllOvers] = useState(false);
+    const [allOvers, setAllOvers] = useState([]);
+
+    useEffect(() => {
+
+        if (!autoScroll) return;
+
+        const el = document.getElementById("over-scroll");
+
+        if (el) {
+            el.scrollLeft = el.scrollWidth;
+        }
+
+    }, [visibleOvers, autoScroll]);
 
     useEffect(() => {
 
@@ -21,6 +39,12 @@ function LiveMatchDetails() {
 
                 const scoreRes = await ApiService.getLiveScore(matchId);
                 setLiveScore(scoreRes.data);
+                const overs = scoreRes?.data?.overBallLog || [];
+
+                setAllOvers(overs);
+
+                // show last 3 overs initially
+                setVisibleOvers(overs.slice(-3));
 
 
             } catch (err) {
@@ -98,8 +122,8 @@ function LiveMatchDetails() {
                             }}
                         >
 
-                            {match.team1.teamName.toUpperCase()} VS{" "}
-                            {match.team2.teamName.toUpperCase()}
+                            {match?.team1?.teamName?.toUpperCase() || ""} VS {" "}
+                            {match?.team2?.teamName?.toUpperCase() || ""}
 
                         </h2>
 
@@ -140,18 +164,69 @@ function LiveMatchDetails() {
                             Overs : {liveScore.overs}
                         </h5>
 
-                        {innings === 2 && (
+                        <div className="d-flex justify-content-between align-items-center mt-2 flex-wrap">
 
-                            <h5
-                                className="fw-bold mt-2 mb-0"
-                                style={{ color: "#ffc107" }}
-                            >
-                                🎯 Need {liveScore.runsRequired} runs from{" "}
-                                {liveScore.ballsRemaining} balls
-                            </h5>
+                            {/* LEFT */}
+                            <div>
 
-                        )}
+                                {innings === 1 ? (
 
+                                    <span className="text-info fw-bold">
+                                        CRR : {liveScore.currentRunRate}
+                                    </span>
+
+                                ) : (
+
+                                    <>
+                                        <span className="text-info fw-bold me-4">
+                                            CRR : {liveScore.currentRunRate}
+                                        </span>
+
+                                        <span className="text-warning fw-bold">
+                                            RRR : {liveScore.requiredRunRate}
+                                        </span>
+                                    </>
+
+                                )}
+
+                            </div>
+
+                            {/* CENTER */}
+                            <div className="text-center flex-grow-1">
+
+                                {innings === 2 && (
+
+                                    <h5
+                                        className="fw-bold mb-0"
+                                        style={{ color: "#ffc107" }}
+                                    >
+                                        🎯 Need {liveScore.runsRequired} runs from {liveScore.ballsRemaining} balls
+                                    </h5>
+
+                                )}
+
+                            </div>
+
+                            {/* RIGHT */}
+                            <div className="text-end">
+
+                                {innings === 1 ? (
+
+                                    <span className="text-warning fw-bold">
+                                        Balls Left : {liveScore.ballsRemaining}
+                                    </span>
+
+                                ) : (
+
+                                    <span className="text-success fw-bold">
+                                        🎯 Target : {liveScore.target}
+                                    </span>
+
+                                )}
+
+                            </div>
+
+                        </div>
                     </div>
 
                     <hr className="border-secondary my-3" />
@@ -186,44 +261,96 @@ function LiveMatchDetails() {
                                 </h5>
                             </div>
 
-                            {/* BALL LOG */}
+                            {/* ================= OVER WISE BALL LOG (SINGLE LINE SCROLL) ================= */}
 
-                            <div
-                                className="d-flex mt-4"
-                                style={{
-                                    overflowX: "auto",
-                                    whiteSpace: "nowrap",
-                                    gap: "8px",
-                                    paddingBottom: "10px"
-                                }}
-                            >
+                            <div className="mt-4 w-100">
 
-                                {liveScore.ballLog?.map((ball, index) => (
+                                <h6 className="text-secondary mb-9 fw-bold">
+                                    Ball by Ball
+                                </h6>
 
-                                    <div
-                                        key={index}
-                                        className="rounded-circle d-flex justify-content-center align-items-center fw-bold"
-                                        style={{
-                                            minWidth: "38px",
-                                            height: "38px",
-                                            background:
-                                                ball === "W"
-                                                    ? "#dc3545"
-                                                    : ball === "4"
-                                                        ? "#0d6efd"
-                                                        : ball === "6"
-                                                            ? "#198754"
-                                                            : "#343a40",
-                                            color: "white",
-                                            fontSize: "15px",
-                                            flexShrink: 0
-                                        }}
-                                    >
-                                        {ball}
-                                    </div>
+                                <div
+                                    id="over-scroll"
+                                    className="hide-scroll d-flex"
+                                    onScroll={(e) => {
 
-                                ))}
+                                        const el = e.target;
 
+                                        const atEnd =
+                                            el.scrollLeft + el.clientWidth >= el.scrollWidth - 20;
+
+                                        setAutoScroll(atEnd);
+
+                                    }}
+                                    style={{
+                                        overflowX: "auto",
+                                        whiteSpace: "nowrap",
+                                        gap: "12px",
+                                        width: "100%",
+                                        paddingBottom: "10px"
+                                    }}
+                                >
+
+                                    {allOvers?.map((over, index) => {
+
+                                        return (
+                                            <div
+                                                key={index}
+                                                className="d-flex align-items-center flex-shrink-0"
+                                                style={{
+                                                    background: "#1f2933",
+                                                    color: "white",
+                                                    borderRadius: "10px",
+                                                    padding: "10px 14px",
+                                                    minWidth: "fit-content"
+                                                }}
+                                            >
+
+                                                {/* Over number */}
+                                                <span className="fw-bold text-warning me-3">
+                                                    Over {over.overNo}
+                                                </span>
+
+                                                {/* Balls in one line */}
+                                                <div className="d-flex align-items-center gap-2 me-3">
+
+                                                    {over.balls.map((ball, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="rounded-circle d-flex justify-content-center align-items-center fw-bold"
+                                                            style={{
+                                                                width: "35px",
+                                                                height: "34px",
+                                                                background:
+                                                                    ball === "W"
+                                                                        ? "#dc3545"
+                                                                        : ball === "4"
+                                                                            ? "#0d6efd"
+                                                                            : ball === "6"
+                                                                                ? "#198754"
+                                                                                : ball === "WD"
+                                                                                    ? "#ffc107"
+                                                                                    : "#343a40",
+                                                                color: "white",
+                                                                fontSize: "13px"
+                                                            }}
+                                                        >
+                                                            {ball}
+                                                        </div>
+                                                    ))}
+
+                                                </div>
+
+                                                {/* Over runs */}
+                                                <span className="fw-bold text-success">
+                                                    = {over.runs}
+                                                </span>
+
+                                            </div>
+                                        );
+                                    })}
+
+                                </div>
                             </div>
 
                         </div>
@@ -256,11 +383,16 @@ function LiveMatchDetails() {
 
                 <div className="card-body text-center">
 
-                    <h4 className="text-secondary">
-
-                        Scorecard Coming Here
-
+                    <h4 className="mb-3">
+                        View Complete Scorecard
                     </h4>
+
+                    <button
+                        className="btn btn-primary btn-lg"
+                        onClick={() => navigate(`/scorecard/${matchId}`)}
+                    >
+                        Open Scorecard
+                    </button>
 
                 </div>
 

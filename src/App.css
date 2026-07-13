@@ -50,3 +50,35 @@
   transform: translateY(-6px);
   box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
 }
+
+.hide-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scroll {
+    -ms-overflow-style: none;  /* IE/Edge */
+    scrollbar-width: none;     /* Firefox */
+}
+
+.ball-scroll {
+  width: 100%;              /* ⭐ FULL WIDTH */
+  display: flex;
+  flex-wrap: nowrap;        /* ⭐ SINGLE LINE ONLY */
+  gap: 10px;
+  overflow-x: auto;         /* horizontal scroll */
+  padding: 10px 0;
+  scroll-behavior: smooth;
+}
+
+.ball-item {
+  min-width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 13px;
+  flex-shrink: 0;           /* ⭐ prevents shrinking */
+}

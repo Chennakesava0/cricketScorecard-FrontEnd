@@ -22,18 +22,12 @@ function MatchScoring() {
     const [outPlayers, setOutPlayers] = useState([]);
 
     const [ballLog, setBallLog] = useState([]);
+
     const [showAllOvers, setShowAllOvers] = useState(false);
 
-    const [bowlerOvers, setBowlerOvers] = useState({});
 
     const [fielderId, setFielderId] = useState("");
 
-    const MAX_OVERS =
-        score?.match?.totalOver === "20"
-            ? 4
-            : score?.match?.totalOver === "50"
-                ? 10
-                : 10;
 
     const [extras, setExtras] = useState({
         wd: 0,
@@ -44,9 +38,10 @@ function MatchScoring() {
     const [nextBatsmanRole, setNextBatsmanRole] = useState(null);
     // "STRIKER" or "NON_STRIKER"
 
-    const STORAGE_KEY = `match_state_${matchId}_innings_${score?.innings || 1}`;
+
     const [lastBowlerId, setLastBowlerId] = useState(null);
     const [ballsInOver, setBallsInOver] = useState(0);
+
 
 
     // ================= LOAD SCORE =================
@@ -62,114 +57,123 @@ function MatchScoring() {
         }
     }, [score]);
 
-    useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
 
-        if (saved) {
-            const data = JSON.parse(saved);
-
-            setStrikerId(data.strikerId || "");
-            setNonStrikerId(data.nonStrikerId || "");
-            setBowlerId(data.bowlerId || "");
-            setOutPlayers(data.outPlayers || []);
-            setBowlerOvers(data.bowlerOvers || {});
-            setExtras(data.extras || { wd: 0, nb: 0, lb: 0 });
-            setBallLog(data.ballLog || []);
-        } else {
-
-            // New innings starts with fresh data
-            setStrikerId("");
-            setNonStrikerId("");
-            setBowlerId("");
-            setOutPlayers([]);
-            setBowlerOvers({});
-            setExtras({
-                wd: 0,
-                nb: 0,
-                lb: 0
-            });
-            setBallLog([]);
-        }
-
-    }, [STORAGE_KEY]);
-
-
-    useEffect(() => {
-        const data = {
-            strikerId,
-            nonStrikerId,
-            bowlerId,
-            outPlayers,
-            bowlerOvers,
-            extras,
-            ballLog
-        };
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }, [strikerId, nonStrikerId, bowlerId, outPlayers, bowlerOvers, extras]);
-
-    useEffect(() => {
-
-        if (!score) return;
-
-        const saved = localStorage.getItem(STORAGE_KEY);
-
-        if (saved) {
-
-            const data = JSON.parse(saved);
-
-            setExtras(
-                data.extras || {
-                    wd: 0,
-                    nb: 0,
-                    lb: 0
-                }
-            );
-
-        } else {
-
-            setExtras({
-                wd: 0,
-                nb: 0,
-                lb: 0
-            });
-
-        }
-
-    }, [score, STORAGE_KEY]);
 
     const loadScore = async () => {
 
-
-        const batRes = await ApiService.getBatting(matchId);
-        setBattingScorecard(batRes.data);
-
-        const bowlRes = await ApiService.getBowling(matchId);
-        setBowlingScorecard(bowlRes.data);
         const res = await ApiService.getMatchState(matchId);
-        console.log("MATCH =", res.data.match);
         setScore(res.data);
 
-        setStrikerId(res.data.strikerId || "");
-        setNonStrikerId(res.data.nonStrikerId || "");
-        setBowlerId(res.data.currentBowlerId || "");
-    };
+        const innings = res.data.innings;
 
-    useEffect(() => {
+        const outRes = await ApiService.getOutPlayers(matchId, innings);
 
-        if (!strikerId || !nonStrikerId || !bowlerId) {
-            return;
-        }
+        setOutPlayers(outRes.data.map(String));
 
-        ApiService.updateCurrentPlayers(matchId, {
+        const battingTeamId =
+            innings === 1
+                ? res.data.match.team1.id
+                : res.data.match.team2.id;
 
-            strikerId: Number(strikerId),
-            nonStrikerId: Number(nonStrikerId),
-            currentBowlerId: Number(bowlerId)
+        const bowlingTeamId =
+            innings === 1
+                ? res.data.match.team2.id
+                : res.data.match.team1.id;
+
+        const batRes = await ApiService.getBattingScorecard(
+            matchId,
+            battingTeamId,
+            innings
+        );
+
+        setBattingScorecard(batRes.data);
+
+        const bowlRes = await ApiService.getBowlingScorecard(
+            matchId,
+            bowlingTeamId,
+            innings
+        );
+        console.log(
+            "Bowling Scorecard =",
+            JSON.stringify(bowlRes.data, null, 2)
+        );
+        setBowlingScorecard(bowlRes.data);
+
+        const ballRes = await ApiService.getBallScoreByMatchAndInnings(
+            matchId,
+            innings
+        );
+
+        setBallLog(ballRes.data);
+
+        const legalBalls = res.data.totalBalls || 0;
+        setBallsInOver(legalBalls % 6);
+
+
+        let wd = 0;
+        let nb = 0;
+        let lb = 0;
+
+        ballRes.data.forEach(ball => {
+
+            if (ball.ballType === "WIDE") {
+                wd += ball.extras || 0;
+            }
+
+            if (ball.ballType === "NO_BALL") {
+
+                if ((ball.extras || 0) > 0) {
+                    nb += 1;
+                }
+
+            }
+
+            if (ball.ballType === "LEG_BYE") {
+                lb += ball.extras || 0;
+            }
 
         });
 
-    }, [strikerId, nonStrikerId, bowlerId]);
+        setExtras({
+            wd,
+            nb,
+            lb
+        });
+
+
+        setStrikerId(res.data.strikerId || "");
+        setNonStrikerId(res.data.nonStrikerId || "");
+
+        if (!res.data.strikerId) {
+            setNextBatsmanRole("STRIKER");
+        } else if (!res.data.nonStrikerId) {
+            setNextBatsmanRole("NON_STRIKER");
+        } else {
+            setNextBatsmanRole(null);
+        }
+
+
+        if (
+            res.data.currentBowlerId === -1 &&
+            res.data.totalBalls > 0 &&
+            res.data.totalBalls % 6 === 0
+        ) {
+
+            setLastBowlerId(bowlerId);
+
+            alert("Over completed! Please select new bowler.");
+
+            setBowlerId("");
+
+        }
+        else {
+
+            setBowlerId(res.data.currentBowlerId);
+
+        }
+
+
+    };
 
 
 
@@ -232,27 +236,39 @@ function MatchScoring() {
     // ================= FILTERS =================
     const availableBatters = battingPlayers;
 
-    const availableBowlers = bowlingPlayers.filter(p => {
+    const availableBowlers = bowlingPlayers.filter(player => {
 
-        const role = p.player.role?.toUpperCase();
+        const role = player.player.role?.toUpperCase();
 
-        const balls = bowlerOvers[p.player.id] || 0;
+        const stats = bowlingScorecard.find(
+            b => b.playerId === player.player.id
+        );
 
-        const maxBalls =
-            score?.match?.totalOvers === 20
-                ? 24
-                : 60;
+        const oversBowled = parseFloat(stats?.overs || "0");
 
-        const canStillBowl = balls < maxBalls;
+        const totalOvers = Number(score?.match?.totalOvers);
 
-        const notPreviousOverBowler =
-            String(p.player.id) !== String(lastBowlerId);
+        let maxOvers;
+
+        if (totalOvers === 20) {
+            maxOvers = 4;
+        } else if (totalOvers === 50) {
+            maxOvers = 10;
+        } else {
+            maxOvers = Math.ceil(totalOvers / 5);
+        }
+
+        const canStillBowl = oversBowled < maxOvers;
+
+        const notPreviousBowler =
+            String(player.player.id) !== String(lastBowlerId);
 
         return (
             (role.includes("BOWLER") || role.includes("ALL")) &&
             canStillBowl &&
-            notPreviousOverBowler
+            notPreviousBowler
         );
+
     });
 
     if (!score || !score.match) return <h3>Loading...</h3>;
@@ -310,19 +326,76 @@ function MatchScoring() {
         (score?.target || 0) - (score?.totalRuns || 0)
     );
 
-    const groupedOvers = Object.entries(
-        ballLog.reduce((acc, ball) => {
+    let legalBallCount = 0;
 
-            if (!acc[ball.over]) {
-                acc[ball.over] = [];
+    const groupedOversMap = {};
+
+    ballLog.forEach((ball) => {
+
+        const over = Math.floor(legalBallCount / 6);
+
+        let label = "";
+
+        // ================= WICKET =================
+        if (ball.wicketType && ball.wicketType !== "NOT_OUT") {
+            label = "W";
+            legalBallCount++; // wicket is a legal ball
+        }
+
+        // ================= NORMAL BALL =================
+        else if (ball.ballType === "NORMAL") {
+            label = String(ball.runs);
+            legalBallCount++;
+        }
+
+        // ================= LEG BYE =================
+        else if (ball.ballType === "LEG_BYE") {
+            switch (ball.extras) {
+                case 0: label = "LB"; break;
+                case 1: label = "LB1"; break;
+                case 2: label = "LB2"; break;
+                case 3: label = "LB3"; break;
+                case 4: label = "LB4"; break;
+                default: label = "LB";
             }
+            legalBallCount++;
+        }
 
-            acc[ball.over].push(ball.label);
+        // ================= WIDE (NOT LEGAL BALL) =================
+        else if (ball.ballType === "WIDE") {
+            switch (ball.extras) {
+                case 1: label = "WD"; break;
+                case 2: label = "WD1"; break;
+                case 3: label = "WD2"; break;
+                case 4: label = "WD3"; break;
+                case 5: label = "WD5"; break;
+                default: label = "WD";
+            }
+            // ❌ NO legalBallCount++
+        }
 
-            return acc;
+        // ================= NO BALL (NOT LEGAL BALL) =================
+        else if (ball.ballType === "NO_BALL") {
+            switch (ball.extras) {
+                case 1: label = "NB"; break;
+                case 2: label = "NB1"; break;
+                case 3: label = "NB2"; break;
+                case 4: label = "NB4"; break;
+                case 6: label = "NB6"; break;
+                default: label = "NB";
+            }
+            // ❌ NO legalBallCount++
+        }
 
-        }, {})
-    );
+        // ================= GROUPING =================
+        if (!groupedOversMap[over]) {
+            groupedOversMap[over] = [];
+        }
+
+        groupedOversMap[over].push(label);
+    });
+
+    const groupedOvers = Object.entries(groupedOversMap);
 
     const oversToShow = showAllOvers
         ? groupedOvers
@@ -374,7 +447,9 @@ function MatchScoring() {
             })
         );
     };
-    const isLegalBall = true; // for cricket simplicity
+
+
+
     // ================= SCORE BALL =================
     const scoreBall = async (runs, type, wicketType = null) => {
 
@@ -384,24 +459,19 @@ function MatchScoring() {
             return;
         }
 
-        if (ballsInOver >= 6) {
-            alert("Over completed. Please select new bowler.");
+
+        if (
+            (wicketType === "CAUGHT" ||
+                wicketType === "RUN_OUT" ||
+                wicketType === "RUN_OUT_NON_STRIKER" ||
+                wicketType === "STUMPED") &&
+            !fielderId
+        ) {
+            alert("Please select a fielder.");
             return;
         }
 
 
-        // ================= EXTRAS =================
-        if (type === "WIDE") {
-            setExtras(prev => ({ ...prev, wd: prev.wd + runs }));
-        }
-
-        if (type === "NO_BALL") {
-            setExtras(prev => ({ ...prev, nb: prev.nb + runs }));
-        }
-
-        if (type === "LEG_BYE") {
-            setExtras(prev => ({ ...prev, lb: prev.lb + runs }));
-        }
 
         // ================= API CALL =================
         try {
@@ -409,8 +479,18 @@ function MatchScoring() {
             await ApiService.scoreBall({
 
                 match: { matchId: Number(matchId) },
-                batsman: { id: Number(strikerId) },
-                bowler: { id: Number(bowlerId) },
+
+                batsman: {
+                    id: Number(
+                        wicketType === "RUN_OUT_NON_STRIKER"
+                            ? nonStrikerId
+                            : strikerId
+                    )
+                },
+
+                bowler: {
+                    id: Number(bowlerId)
+                },
 
                 fielder: fielderId
                     ? { id: Number(fielderId) }
@@ -422,15 +502,19 @@ function MatchScoring() {
                         : runs,
 
                 extras:
-                    type === "LEG_BYE" ||
-                        type === "WIDE" ||
-                        type === "NO_BALL"
+                    type === "WIDE"
                         ? runs
-                        : 0,
+                        : type === "NO_BALL"
+                            ? 1
+                            : type === "LEG_BYE"
+                                ? runs
+                                : 0,
 
                 ballType: type,
                 wicketType
             });
+
+            setFielderId("");
 
         } catch (error) {
 
@@ -439,7 +523,7 @@ function MatchScoring() {
             console.log("FULL ERROR =", error);
 
         }
-        await loadScore();
+
 
         const isLegalBall =
             type === "NORMAL" ||
@@ -452,6 +536,15 @@ function MatchScoring() {
             wicketType === "RUN_OUT" ||
             wicketType === "RUN_OUT_NON_STRIKER";
 
+        let newBallsInOver = ballsInOver;
+
+        if (isLegalBall) {
+            newBallsInOver++;
+            setBallsInOver(newBallsInOver);
+        }
+
+
+
         updateLocalBatsman(
             strikerId,
             type === "NORMAL" ? runs : 0,
@@ -459,208 +552,15 @@ function MatchScoring() {
         );
         updateLocalBowler(bowlerId, runs, isLegalBall);
 
-        let label = "";
+        setTimeout(() => {
+            loadScore();
+        }, 200);
 
-        if (wicketType) {
-            label = "W";
-        }
-        else if (type === "NORMAL") {
-            label = String(runs);
-        }
-        else if (type === "WIDE") {
-            label =
-                runs === 1 ? "WD" :
-                    runs === 2 ? "WD1" :
-                        runs === 3 ? "WD2" :
-                            runs === 5 ? "WD4" :
-                                `WD${runs - 1}`;
-        }
-        else if (type === "NO_BALL") {
-            label =
-                runs === 1 ? "NB" :
-                    runs === 2 ? "NB1" :
-                        runs === 3 ? "NB2" :
-                            runs === 4 ? "NB3" :
-                                runs === 5 ? "NB4" :
-                                    runs === 7 ? "NB6" :
-                                        `NB${runs - 1}`;
-        }
-        else if (type === "LEG_BYE") {
-            label =
-                runs === 0 ? "LB" :
-                    runs === 1 ? "LB1" :
-                        runs === 2 ? "LB2" :
-                            runs === 3 ? "LB3" :
-                                runs === 4 ? "LB4" :
-                                    `LB${runs}`;
-        }
-
-        setBallLog(prev => [
-            ...prev,
-            {
-                over: Math.floor((score?.totalBalls || 0) / 6),
-                label
-            }
-        ]);
-
-
-
-        if (isLegalBall) {
-
-            setBowlerOvers(prev => ({
-                ...prev,
-                [bowlerId]: (prev[bowlerId] || 0) + 1
-            }));
-
-            setBallsInOver(prev => {
-
-                const next = prev + 1;
-                if (next === 6) {
-
-                    const isOddRun =
-                        (type === "NORMAL" || type === "LEG_BYE")
-                            ? runs % 2 === 1
-                            : false;
-
-                    // Last ball 0,2,4 -> change strike
-                    if (!isOddRun) {
-                        const currentStriker = strikerId;
-                        const currentNonStriker = nonStrikerId;
-
-                        setStrikerId(currentNonStriker);
-                        setNonStrikerId(currentStriker);
-                    }
-
-                    setTimeout(() => {
-                        alert("Over completed! Select new bowler");
-                    }, 50);
-
-                    setLastBowlerId(bowlerId);
-                    setBowlerId("");
-
-                    return 0;
-                }
-                return next;
-            });
-        }
-        // ================= WICKET =================
-        if (wicketType) {
-
-            const next = ballsInOver + 1;
-            const isLastBallOfOver = next === 6;
-
-            if (wicketType === "RUN_OUT_NON_STRIKER") {
-
-                setOutPlayers(prev => [...prev, nonStrikerId]);
-                setNonStrikerId("");
-
-                await updateCurrentPlayers(
-                    strikerId,
-                    "",
-                    bowlerId
-                );
-
-                setNextBatsmanRole("NON_STRIKER");
-
-            } else {
-
-                setOutPlayers(prev => [...prev, strikerId]);
-                setStrikerId("");
-
-                await updateCurrentPlayers(
-                    "",
-                    nonStrikerId,
-                    bowlerId
-                );
-
-                setNextBatsmanRole("STRIKER");
-            }
-
-            if (isLastBallOfOver) {
-
-                setLastBowlerId(bowlerId);
-                setBowlerId("");
-                setBallsInOver(0);
-
-                alert("Over completed! Select new bowler");
-
-            } else {
-
-                setBallsInOver(next);
-
-            }
-
-            return;
-        }
-
-        // ================= STRIKE ROTATION =================
-        // NORMAL
-        const isLastBall = ballsInOver + 1 === 6;
-
-        if (
-            type === "NORMAL" &&
-            runs % 2 === 1 &&
-            !isLastBall
-        ) {
-            const temp = strikerId;
-
-            setStrikerId(nonStrikerId);
-            setNonStrikerId(temp);
-
-            await updateCurrentPlayers(
-                nonStrikerId,
-                temp,
-                bowlerId
-            );
-        }
-
-        // LEG BYE
-        if (
-            type === "LEG_BYE" &&
-            runs % 2 === 1 &&
-            !isLastBall
-        ) {
-            const temp = strikerId;
-            setStrikerId(nonStrikerId);
-            setNonStrikerId(temp);
-        }
-        // WIDE
-        if (type === "WIDE") {
-
-            const actualRunsTaken = runs - 1;
-
-            if (actualRunsTaken % 2 === 1) {
-                const temp = strikerId;
-                setStrikerId(nonStrikerId);
-                setNonStrikerId(temp);
-            }
-        }
-
-        // NO BALL
-        if (type === "NO_BALL") {
-
-            const actualRunsTaken = runs - 1;
-
-            if (actualRunsTaken % 2 === 1) {
-                const temp = strikerId;
-                setStrikerId(nonStrikerId);
-                setNonStrikerId(temp);
-            }
-        }
+        return;
 
 
     };
 
-
-    // ================= END MATCH =================
-    const endMatch = async () => {
-        await ApiService.updateMatch(matchId, {
-            status: "COMPLETED"
-        });
-
-        alert("Match Completed");
-        navigate("/matches");
-    };
 
     return (
         <div className="container-fluid p-3">
@@ -742,7 +642,11 @@ function MatchScoring() {
                     <div className="col-md-6">
 
                         <div className="mb-2">
-                            <b>* {striker?.player?.playerName || "Striker"}</b>
+                            <b>
+                                * {striker
+                                    ? striker.player.playerName
+                                    : "Select Striker"}
+                            </b>
 
                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
@@ -750,7 +654,9 @@ function MatchScoring() {
                         </div>
 
                         <div className="mb-2">
-                            {nonStriker?.player?.playerName || "Non-Striker"}
+                            {nonStriker
+                                ? nonStriker.player.playerName
+                                : "Select Non-Striker"}
 
                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
@@ -769,11 +675,10 @@ function MatchScoring() {
                         </div>
 
                         <div>
-                            Overs- {Math.floor((bowlerOvers[bowlerId] || 0) / 6)}.
-                            {(bowlerOvers[bowlerId] || 0) % 6}
-                            -
+                            Overs: {bowlerStats?.overs || "0.0"}
+                            {" - "}
                             Runs: {bowlerStats?.runsConceded || 0}
-                            -
+                            {" - "}
                             Wickets: {bowlerStats?.wickets || 0}
                         </div>
 
@@ -813,18 +718,17 @@ function MatchScoring() {
                             }}
                         >
                             <option value="">Select Striker</option>
-                            {battingPlayers.map(p => (
-                                <option
-                                    key={p.player.id}
-                                    value={p.player.id}
-                                    disabled={
-                                        String(p.player.id) === String(nonStrikerId) ||
-                                        outPlayers.includes(String(p.player.id))
-                                    }
-                                >
-                                    {p.player.playerName}
-                                </option>
-                            ))}
+                            {battingPlayers
+                                .filter(p => !outPlayers.includes(String(p.player.id)))
+                                .map(p => (
+                                    <option
+                                        key={p.player.id}
+                                        value={p.player.id}
+                                        disabled={String(p.player.id) === String(nonStrikerId)}
+                                    >
+                                        {p.player.playerName}
+                                    </option>
+                                ))}
                         </select>
 
                         {/* NON STRIKER */}
@@ -846,18 +750,17 @@ function MatchScoring() {
                             }}
                         >
                             <option value="">Select Non-Striker</option>
-                            {battingPlayers.map(p => (
-                                <option
-                                    key={p.player.id}
-                                    value={p.player.id}
-                                    disabled={
-                                        String(p.player.id) === String(strikerId) ||
-                                        outPlayers.includes(String(p.player.id))
-                                    }
-                                >
-                                    {p.player.playerName}
-                                </option>
-                            ))}
+                            {battingPlayers
+                                .filter(p => !outPlayers.includes(String(p.player.id)))
+                                .map(p => (
+                                    <option
+                                        key={p.player.id}
+                                        value={p.player.id}
+                                        disabled={String(p.player.id) === String(strikerId)}
+                                    >
+                                        {p.player.playerName}
+                                    </option>
+                                ))}
                         </select>
 
                         {/* ✅ ADD THIS HERE (IMPORTANT PLACE) */}
@@ -893,22 +796,21 @@ function MatchScoring() {
                                     }
 
                                     setNextBatsmanRole(null);
+                                    await loadScore();
                                 }}
                             >
                                 <option>Select Next Batsman</option>
                                 {availableBatters
                                     .filter(
                                         p =>
-                                            !outPlayers.includes(String(p.player.id))
+                                            !outPlayers.includes(String(p.player.id)) &&
+                                            String(p.player.id) !== String(strikerId) &&
+                                            String(p.player.id) !== String(nonStrikerId)
                                     )
                                     .map(p => (
                                         <option
                                             key={p.player.id}
                                             value={p.player.id}
-                                            disabled={
-                                                String(p.player.id) === String(strikerId) ||
-                                                String(p.player.id) === String(nonStrikerId)
-                                            }
                                         >
                                             {p.player.playerName}
                                         </option>
@@ -927,31 +829,33 @@ function MatchScoring() {
 
                                 setBowlerId(newBowler);
 
-                                // await updateCurrentPlayers(
-                                //     strikerId,
-                                //     nonStrikerId,
-                                //     ""
-                                // );
+                                // Current bowler becomes the previous bowler
+                                setLastBowlerId(newBowler);
 
-                                setBallsInOver(
-                                    (bowlerOvers[newBowler] || 0) % 6
+                                setBallsInOver(0);
+
+                                await updateCurrentPlayers(
+                                    strikerId,
+                                    nonStrikerId,
+                                    newBowler
                                 );
-
-                                // await updateCurrentPlayers(
-                                //     strikerId,
-                                //     nonStrikerId,
-                                //     newBowler
-                                // );
 
                             }}
                         >
+
                             <option>Select Bowler</option>
+
                             {availableBowlers.map(p => (
-                                <option key={p.player.id} value={p.player.id}>
+                                <option
+                                    key={p.player.id}
+                                    value={p.player.id}
+                                    disabled={String(p.player.id) === String(lastBowlerId)}
+                                >
                                     {p.player.playerName}
                                 </option>
                             ))}
                         </select>
+
 
                     </div>
                 </div>
@@ -982,13 +886,15 @@ function MatchScoring() {
                             <button className="btn btn-warning" onClick={() => scoreBall(1, "WIDE")}>WD</button>
                             <button className="btn btn-warning" onClick={() => scoreBall(2, "WIDE")}>WD1</button>
                             <button className="btn btn-warning" onClick={() => scoreBall(3, "WIDE")}>WD2</button>
+                            <button className="btn btn-warning" onClick={() => scoreBall(4, "WIDE")}>WD3</button>
                             <button className="btn btn-warning" onClick={() => scoreBall(5, "WIDE")}>WD5</button>
 
-                            <button className="btn btn-info" onClick={() => scoreBall(1, "NO_BALL")}>NB</button>
-                            <button className="btn btn-info" onClick={() => scoreBall(2, "NO_BALL")}>NB1</button>
-                            <button className="btn btn-info" onClick={() => scoreBall(3, "NO_BALL")}>NB2</button>
-                            <button className="btn btn-info" onClick={() => scoreBall(5, "NO_BALL")}>NB4</button>
-                            <button className="btn btn-info" onClick={() => scoreBall(7, "NO_BALL")}>NB6</button>
+                            <button className="btn btn-info" onClick={() => scoreBall(0, "NO_BALL")}>NB</button>
+                            <button className="btn btn-info" onClick={() => scoreBall(1, "NO_BALL")}>NB1</button>
+                            <button className="btn btn-info" onClick={() => scoreBall(2, "NO_BALL")}>NB2</button>
+                            <button className="btn btn-info" onClick={() => scoreBall(3, "NO_BALL")}>NB3</button>
+                            <button className="btn btn-info" onClick={() => scoreBall(4, "NO_BALL")}>NB4</button>
+                            <button className="btn btn-info" onClick={() => scoreBall(6, "NO_BALL")}>NB6</button>
 
                         </div>
 
@@ -997,6 +903,7 @@ function MatchScoring() {
                             <button className="btn btn-secondary" onClick={() => scoreBall(0, "LEG_BYE")}>LB</button>
                             <button className="btn btn-secondary" onClick={() => scoreBall(1, "LEG_BYE")}>LB1</button>
                             <button className="btn btn-secondary" onClick={() => scoreBall(2, "LEG_BYE")}>LB2</button>
+                            <button className="btn btn-secondary" onClick={() => scoreBall(3, "LEG_BYE")}>LB3</button>
                             <button className="btn btn-secondary" onClick={() => scoreBall(4, "LEG_BYE")}>LB4</button>
 
                         </div>
@@ -1016,7 +923,7 @@ function MatchScoring() {
                                     key={p.player.id}
                                     value={p.player.id}
                                 >
-                                    {p.player.playerName}
+                                    {p.player.playerName} ({p.player.role})
                                 </option>
                             ))}
                         </select>
@@ -1131,14 +1038,7 @@ function MatchScoring() {
 
             </div>
 
-            {/* ================= END MATCH ================= */}
-            <div className="text-center mt-3">
 
-                <button className="btn btn-danger btn-lg" onClick={endMatch}>
-                    End Match
-                </button>
-
-            </div>
 
         </div>
     );

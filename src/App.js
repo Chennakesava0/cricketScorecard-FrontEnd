@@ -15,6 +15,7 @@ import CompletedMatches from './CompletedMatche';
 import MatchSetup from './MatchSetup';
 import MatchScoring from './MatchScoring';
 import LiveMatchDetails from './LiveMatchDetalis';
+import Scorecard from './Scorecard';
 
 function App() {
   return (
@@ -29,11 +30,10 @@ function App() {
         <Route path='/matchscoring/:matchId' element={<MatchScoring />} />
         <Route path='/live/:matchId' element={<LiveMatchDetails />} />
         <Route path='/livescore/:matchId' element={<Livescore />} />
+        <Route path='/scorecard/:matchId' element={<Scorecard />} />
         <Route path='/upcoming' element={<UpcomingMatches />} />
         <Route path='/live' element={<LiveMatches />} />
         <Route path='/completed' element={<CompletedMatches />} />
-        <Route path='/batting/:matchId' element={<BattingScorecard />} />
-        <Route path='/bowling/:matchId' element={<BowlingScorecard />} />
         <Route path='/result/:matchId' element={<MatchResult />} />
       </Routes>
     </BrowserRouter>

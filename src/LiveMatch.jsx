@@ -189,7 +189,7 @@ function LiveMatches() {
                     {/* STATUS */}
                     {innings === 1 ? (
                         <div className="text-center text-warning">
-                            {match.tossWinner} won toss & elected to {match.electedTo}
+                            {match.tossWinner} Won Toss & Elected to {match.electedTo}
                         </div>
                     ) : (
                         <div className="text-center fw-semibold">

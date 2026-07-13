@@ -49,6 +49,7 @@ function LiveScore() {
                 .catch(() => setLiveMatches([]));
 
             ApiService.getCompletedMatches()
+
                 .then(res => setCompletedMatches(res.data || []))
                 .catch(() => setCompletedMatches([]));
         };
@@ -96,8 +97,8 @@ function LiveScore() {
     }, [liveMatch?.matchId]);
 
     useEffect(() => {
-    console.log("LIVE SCORE FROM API:", liveScore);
-}, [liveScore]);
+        console.log("LIVE SCORE FROM API:", liveScore);
+    }, [liveScore]);
 
 
     const oversString =
@@ -138,49 +139,81 @@ function LiveScore() {
 
     const innings = Number(liveScore?.innings || 1);
 
-const target = Number(liveScore?.target ?? 0);
-    
-
-const currentRuns = Number(liveScore?.totalRuns || 0);
-
-const runsRequired =
-    innings === 2 ? Math.max(target - currentRuns, 0) : 0;
+    const target = Number(liveScore?.target ?? 0);
 
 
-    // TEAM 1 (first innings or final score)
-    const team1Runs =
-        innings === 2
-            ? (liveScore?.firstInningsRuns || 0)
-            : (liveScore?.totalRuns || 0);
+    const currentRuns = Number(liveScore?.totalRuns || 0);
 
-    const team1Wickets =
-        innings === 2
-            ? (liveScore?.firstInningsWickets || 0)
-            : (liveScore?.totalWickets || 0);
+    const runsRequired =
+        innings === 2 ? Math.max(target - currentRuns, 0) : 0;
 
-    const team1Overs = `${matchOversLimit}.0`;
 
-    // TEAM 2 (only active in 2nd innings)
-    const team2Runs =
-        innings === 2
-            ? (liveScore?.totalRuns || 0)
-            : 0;
+    // Find which team batted first
 
-    const team2Wickets =
-        innings === 2
-            ? (liveScore?.totalWickets || 0)
-            : 0;
+    let battingFirstTeam = "";
+    let battingSecondTeam = "";
 
-    const team2Overs =
-        innings === 2
-            ? `${secondInningsOvers}.${currentBalls}`
-            : "0.0";
+    if (liveMatch) {
 
+        if (liveMatch.electedTo === "BAT") {
+
+            battingFirstTeam = liveMatch.tossWinner;
+
+        } else {
+
+            battingFirstTeam =
+                liveMatch.tossWinner === liveMatch.team1.teamName
+                    ? liveMatch.team2.teamName
+                    : liveMatch.team1.teamName;
+        }
+
+        battingSecondTeam =
+            battingFirstTeam === liveMatch.team1.teamName
+                ? liveMatch.team2.teamName
+                : liveMatch.team1.teamName;
+    }
+
+    let firstDisplay = {};
+    let secondDisplay = {};
+
+    if (innings === 1) {
+
+        firstDisplay = {
+            name: battingFirstTeam,
+            runs: liveScore?.totalRuns || 0,
+            wickets: liveScore?.totalWickets || 0,
+            overs: liveScore?.overs || "0.0"
+        };
+
+        secondDisplay = {
+            name: battingSecondTeam,
+            runs: 0,
+            wickets: 0,
+            overs: "0.0"
+        };
+
+    } else {
+
+        firstDisplay = {
+            name: battingFirstTeam,
+            runs: liveScore?.firstInningsRuns || 0,
+            wickets: liveScore?.firstInningsWickets || 0,
+            overs: liveScore?.firstInningsOvers || "0.0"
+        };
+
+        secondDisplay = {
+            name: battingSecondTeam,
+            runs: liveScore?.totalRuns || 0,
+            wickets: liveScore?.totalWickets || 0,
+            overs: `${secondInningsOvers}.${currentBalls}`
+        };
+
+    }
 
 
     const completedMatch =
         completedMatches.length > 0
-            ? completedMatches[0]
+            ? completedMatches[completedMatches.length - 1]
             : null;
 
     const getDisplayDate = (matchDate) => {
@@ -237,7 +270,7 @@ const runsRequired =
                 }}
                 onClick={onClick}
             >
-                <div className="card-body p-4 d-flex flex-column justify-content-between h-100">
+                <div className="card-body p-4 d-flex flex-column  h-100">
 
                     {/* Header */}
                     <div className="d-flex justify-content-between align-items-start mb-3">
@@ -374,16 +407,16 @@ const runsRequired =
                                 <div className="d-flex align-items-center justify-content-between mb-3">
 
                                     <span className="fw-semibold text-white fs-5 m-0">
-                                        {liveMatch.team1?.teamName}
+                                        {firstDisplay.name}
                                     </span>
 
                                     <div className="text-end d-flex align-items-baseline gap-2">
                                         <span className="text-warning fw-bold fs-4 m-0">
-                                            {team1Runs}/{team1Wickets}
+                                            {firstDisplay.runs}/{firstDisplay.wickets}
                                         </span>
 
                                         <small className="text-light opacity-75">
-                                            ({team1Overs})
+                                            ({firstDisplay.overs})
                                         </small>
                                     </div>
                                 </div>
@@ -393,16 +426,16 @@ const runsRequired =
                                 <div className="d-flex align-items-center justify-content-between mb-3">
 
                                     <span className="fw-semibold text-white fs-5 m-0">
-                                        {liveMatch.team2?.teamName}
+                                        {secondDisplay.name}
                                     </span>
 
                                     <div className="text-end d-flex align-items-baseline gap-2">
                                         <span className="text-info fw-bold fs-4 m-0">
-                                            {team2Runs}/{team2Wickets}
+                                            {secondDisplay.runs}/{secondDisplay.wickets}
                                         </span>
 
                                         <small className="text-light opacity-75">
-                                            ({team2Overs})
+                                            ({secondDisplay.overs})
                                         </small>
                                     </div>
 
@@ -458,27 +491,108 @@ const runsRequired =
                         onClick={() => navigate("/completed")}
                     >
                         {completedMatch ? (
-                            <>
-                                <div className="d-flex justify-content-between mb-2">
-                                    <span>{completedMatch.team1?.teamName || completedMatch.team1?.name}</span>
-                                    <strong>
-                                        {completedMatch.team1?.runs}/{completedMatch.team1?.wickets}
-                                    </strong>
+
+                            <div
+                                key={completedMatch.matchId}
+                                className="d-flex flex-column h-100"
+                            >
+
+                                {/* Venue */}
+                                <div
+                                    className="mb-4"
+                                    style={{
+                                        color: "#bdbdbd",
+                                        fontSize: "15px",
+                                        fontWeight: "500"
+                                    }}
+                                >
+                                    📍 {completedMatch.venue}
                                 </div>
 
-                                <div className="d-flex justify-content-between">
-                                    <span>{completedMatch.team2?.teamName || completedMatch.team2?.name}</span>
-                                    <strong>
-                                        {completedMatch.team2?.runs}/{completedMatch.team2?.wickets}
-                                    </strong>
+                                {/* Score Section */}
+                                <div className="flex-grow-1 d-flex flex-column justify-content-center">
+
+                                    {/* Team 1 */}
+                                    <div
+                                        className="d-flex justify-content-between align-items-center mb-4"
+                                    >
+                                        <span
+                                            className="fw-bold"
+                                            style={{
+                                                fontSize: "18px",
+                                                letterSpacing: "0.5px"
+                                            }}
+                                        >
+                                            {completedMatch.team1Name}
+                                        </span>
+
+                                        <div
+                                            className="fw-bold"
+                                            style={{ fontSize: "18px" }}
+                                        >
+                                            {completedMatch.firstInningsRuns ?? 0}/
+                                            {completedMatch.firstInningsWickets ?? 0}
+
+                                            <span
+                                                className="text-light ms-2"
+                                                style={{ fontSize: "16px" }}
+                                            >
+                                                ({completedMatch.firstInningsOvers ?? "0.0"})
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Team 2 */}
+                                    <div
+                                        className="d-flex justify-content-between align-items-center"
+                                    >
+                                        <span
+                                            className="fw-bold"
+                                            style={{
+                                                fontSize: "18px",
+                                                letterSpacing: "0.5px"
+                                            }}
+                                        >
+                                            {completedMatch.team2Name}
+                                        </span>
+
+                                        <div
+                                            className="fw-bold"
+                                            style={{ fontSize: "18px" }}
+                                        >
+                                            {completedMatch.secondInningsRuns ?? 0}/
+                                            {completedMatch.secondInningsWickets ?? 0}
+
+                                            <span
+                                                className="text-light ms-2"
+                                                style={{ fontSize: "16px" }}
+                                            >
+                                                ({completedMatch.secondInningsOvers ?? "0.0"})
+                                            </span>
+                                        </div>
+                                    </div>
+
                                 </div>
 
-                                <hr />
-
-                                <div className="alert alert-success py-2 mb-0">
-                                    {completedMatch.result}
+                                <div
+                                    className="mt-auto pt-4"
+                                    style={{
+                                        borderTop: "1px solid rgba(255,255,255,0.15)"
+                                    }}
+                                >
+                                    <div
+                                        className="text-center fw-bold"
+                                        style={{
+                                            color: "#4ade80",
+                                            fontSize: "24px"
+                                        }}
+                                    >
+                                        {completedMatch.result || "Match Completed"}
+                                    </div>
                                 </div>
-                            </>
+
+                            </div>
+
                         ) : (
                             <div className="text-center mt-5">
                                 <h1 className="text-secondary">0</h1>
