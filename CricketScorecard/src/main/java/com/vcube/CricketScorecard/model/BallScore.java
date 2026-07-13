@@ -36,6 +36,8 @@ public class BallScore {
 	@ManyToOne
 	@JoinColumn(name = "fielder_id")
 	private Player fielder;
+	
+	private Integer innings;
 
 	private Integer overNo;
 

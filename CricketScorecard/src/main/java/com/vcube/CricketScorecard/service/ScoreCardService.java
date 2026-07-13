@@ -12,11 +12,15 @@ import com.vcube.CricketScorecard.dto.BattingscorecardDTO;
 import com.vcube.CricketScorecard.dto.BowlingScorecardDTO;
 import com.vcube.CricketScorecard.dto.LiveScoreDTO;
 import com.vcube.CricketScorecard.dto.MatchResultDTO;
+import com.vcube.CricketScorecard.dto.TeamScorecardDTO;
 import com.vcube.CricketScorecard.enums.BallType;
 import com.vcube.CricketScorecard.model.BallScore;
 import com.vcube.CricketScorecard.model.Match;
+import com.vcube.CricketScorecard.model.MatchPlayer;
 import com.vcube.CricketScorecard.model.MatchState;
+import com.vcube.CricketScorecard.model.Player;
 import com.vcube.CricketScorecard.repository.BallScoreRepository;
+import com.vcube.CricketScorecard.repository.MatchPlayerRepository;
 import com.vcube.CricketScorecard.repository.MatchRepository;
 import com.vcube.CricketScorecard.repository.MatchStateRepository;
 
@@ -31,6 +35,9 @@ public class ScoreCardService {
 	
 	@Autowired
 	MatchRepository matchRepository;
+	
+	@Autowired
+	private MatchPlayerRepository matchPlayerRepository;
 	
 	public LiveScoreDTO getLiveScore(Integer matchId,
 			                         Integer target,
@@ -137,51 +144,105 @@ public class ScoreCardService {
 			
 	}
 	
-	 public MatchResultDTO getMatchResult(Integer matchId) {
+	public MatchResultDTO getMatchResult(Integer matchId) {
 
-	        Match match =
-	                matchRepository.findById(matchId)
-	                               .orElseThrow();
+	    Match match = matchRepository.findById(matchId)
+	            .orElseThrow(() -> new RuntimeException("Match not found"));
 
-	        MatchResultDTO dto = new MatchResultDTO();
+	    MatchState state = matchStateRepository.findByMatchMatchId(matchId)
+	            .orElseThrow(() -> new RuntimeException("Match state not found"));
 
-	        dto.setWinnerTeam(match.getWinner());
+	    MatchResultDTO dto = new MatchResultDTO();
 
-	        if (match.getWinner() != null) {
+	    dto.setMatchId(match.getMatchId());
 
-	            if (match.getWinner()
-	                    .equals(match.getTeam1().getTeamName())) {
+	    dto.setVenue(match.getVenue());
 
-	                dto.setLoserTeam(
-	                        match.getTeam2().getTeamName());
+	    dto.setTeam1Name(match.getTeam1().getTeamName());
+	    dto.setTeam2Name(match.getTeam2().getTeamName());
 
-	            } else {
+	    dto.setFirstInningsRuns(state.getFirstInningsRuns());
+	    dto.setFirstInningsWickets(state.getFirstInningsWickets());
+	    dto.setFirstInningsOvers(convertToOvers(state.getFirstInningsBalls()));
 
-	                dto.setLoserTeam(
-	                        match.getTeam1().getTeamName());
-	            }
+	    dto.setSecondInningsRuns(state.getSecondInningsRuns());
+	    dto.setSecondInningsWickets(state.getSecondInningsWickets());
+	    dto.setSecondInningsOvers(convertToOvers(state.getSecondInningsBalls()));
 
-	            dto.setResult(
-	                    match.getWinner() + " Won The Match");
+	    dto.setWinnerTeam(match.getWinner());
+
+	    if (match.getWinner() != null) {
+
+	        if (match.getWinner().equals(match.getTeam1().getTeamName())) {
+
+	            dto.setLoserTeam(match.getTeam2().getTeamName());
+
+	            int margin =
+	                    state.getFirstInningsRuns()
+	                  - state.getSecondInningsRuns();
+
+	            dto.setWinningMargin(margin);
+	            dto.setMarginType("RUNS");
+
+	            dto.setResult(match.getWinner() + " won by " + margin + " runs");
+
+	        } else {
+
+	            dto.setLoserTeam(match.getTeam1().getTeamName());
+
+	            int wicketsRemaining =
+	                    10 - state.getSecondInningsWickets();
+
+	            dto.setWinningMargin(wicketsRemaining);
+	            dto.setMarginType("WICKETS");
+
+	            dto.setResult(match.getWinner() + " won by "
+	                    + wicketsRemaining + " wickets");
 	        }
-
-	        dto.setWinningMargin(0);
-	        dto.setMarginType("RUNS");
-
-	        dto.setMatchStatus(match.getStatus().name());
-	        return dto;
 	    }
-	 
-	 public List<BattingscorecardDTO> getBattingScorecard(Integer matchId) {
 
+	    dto.setMatchStatus(match.getStatus().name());
+
+	    return dto;
+	}
+	
+	private String convertToOvers(Integer balls) {
+
+	    if (balls == null) {
+	        return "0.0";
+	    }
+
+	    int overs = balls / 6;
+	    int remainingBalls = balls % 6;
+
+	    return overs + "." + remainingBalls;
+	}
+	
+	 
+	 public List<BattingscorecardDTO> getBattingScorecard(Integer matchId,
+                                                          Integer teamId,
+                                                          Integer innings) {
 		    List<BallScore> balls =
 		            ballScoreRepository.findByMatch_MatchIdOrderByOverNoAscBallNoAsc(matchId);
 
 		    Map<Integer, BattingscorecardDTO> battingMap = new HashMap<>();
+		    
+		    Map<Integer, Integer> battingOrder = new HashMap<>();
+
+		    int order = 1;
 
 		    for (BallScore ball : balls) {
+		    	
+		    	if (!ball.getBatsman().getTeam().getId().equals(teamId)
+		    	        || !ball.getInnings().equals(innings)) {
+		    	    continue;
+		    	}
 
 		        Integer playerId = ball.getBatsman().getId();
+		        
+		        if (!battingOrder.containsKey(playerId)) {
+		            battingOrder.put(playerId, order++);
+		        }
 
 		        BattingscorecardDTO dto =
 		                battingMap.getOrDefault(playerId,
@@ -203,6 +264,13 @@ public class ScoreCardService {
 		            dto.setBalls(
 		                    (dto.getBalls() == null ? 0 : dto.getBalls()) + 1);
 		        }
+		        
+		     // Fours
+		        if (ball.getRuns() == 4) {
+
+		            dto.setFours(
+		                (dto.getFours() == null ? 0 : dto.getFours()) + 1);
+		        }
 
 		        // Sixes
 		        if (ball.getRuns() == 6) {
@@ -222,12 +290,75 @@ public class ScoreCardService {
 		        dto.setStrikeRate(
 		                Math.round(strikeRate * 100.0) / 100.0);
 
-		        // Dismissal Type
+		        
+		     // Dismissal Type
 		        if (ball.getWicketType() != null
 		                && !ball.getWicketType().name().equals("NOT_OUT")) {
 
-		            dto.setDismissalType(
-		                    ball.getWicketType().name());
+		            switch (ball.getWicketType()) {
+
+		            case CAUGHT:
+
+		                if (ball.getFielder() != null) {
+		                    dto.setDismissalType(
+		                            "c " + ball.getFielder().getPlayerName()
+		                            + " b " + ball.getBowler().getPlayerName());
+		                } else {
+		                    dto.setDismissalType(
+		                            "c b " + ball.getBowler().getPlayerName());
+		                }
+
+		                break;
+
+		                case BOWLED:
+		                    dto.setDismissalType(
+		                            "b " + ball.getBowler().getPlayerName());
+		                    break;
+
+		                case LBW:
+		                    dto.setDismissalType(
+		                            "lbw b " + ball.getBowler().getPlayerName());
+		                    break;
+
+		                case STUMPED:
+
+		                    if (ball.getFielder() != null) {
+		                        dto.setDismissalType(
+		                                "st " + ball.getFielder().getPlayerName()
+		                                + " b " + ball.getBowler().getPlayerName());
+		                    } else {
+		                        dto.setDismissalType(
+		                                "st b " + ball.getBowler().getPlayerName());
+		                    }
+
+		                    break;
+
+		                case RUN_OUT:
+
+		                    if (ball.getFielder() != null) {
+		                        dto.setDismissalType(
+		                                "run out (" + ball.getFielder().getPlayerName() + ")");
+		                    } else {
+		                        dto.setDismissalType("run out");
+		                    }
+
+		                    break;
+
+		                case RUN_OUT_NON_STRIKER:
+
+		                    if (ball.getFielder() != null) {
+		                        dto.setDismissalType(
+		                                "run out (" + ball.getFielder().getPlayerName() + ")");
+		                    } else {
+		                        dto.setDismissalType("run out");
+		                    }
+
+		                    break;
+		                    
+		                default:
+		                    dto.setDismissalType(
+		                            ball.getWicketType().name());
+		            }
 		        }
 
 		        battingMap.put(playerId, dto);
@@ -241,11 +372,61 @@ public class ScoreCardService {
 		        }
 		    });
 
-		    return new ArrayList<>(battingMap.values());
+		    List<MatchPlayer> playing11 =
+		            matchPlayerRepository.findByMatchMatchIdAndPlayerTeamId(matchId, teamId);
+
+		    for (MatchPlayer matchPlayer : playing11) {
+
+		        Player player = matchPlayer.getPlayer();
+
+		        if (!battingMap.containsKey(player.getId())) {
+
+		            BattingscorecardDTO dto = new BattingscorecardDTO();
+
+		            dto.setPlayerId(player.getId());
+		            dto.setPlayerName(player.getPlayerName());
+
+		            dto.setRuns(0);
+		            dto.setBalls(0);
+		            dto.setFours(0);
+		            dto.setSixes(0);
+		            dto.setStrikeRate(0.0);
+
+		            dto.setDismissalType("YET TO BAT");
+
+		            battingMap.put(player.getId(), dto);
+		        }
+		    }
+		    
+		    List<BattingscorecardDTO> battingList = new ArrayList<>(battingMap.values());
+
+		    battingList.sort((a, b) -> {
+
+		        Integer order1 = battingOrder.get(a.getPlayerId());
+		        Integer order2 = battingOrder.get(b.getPlayerId());
+
+		        // Yet To Bat players go to the bottom
+		        if (order1 == null && order2 == null) {
+		            return 0;
+		        }
+
+		        if (order1 == null) {
+		            return 1;
+		        }
+
+		        if (order2 == null) {
+		            return -1;
+		        }
+
+		        return order1.compareTo(order2);
+		    });
+
+		    return battingList;
 		}
 	 
-	 public List<BowlingScorecardDTO> getBowlingScorecard(Integer matchId) {
-
+	 public List<BowlingScorecardDTO> getBowlingScorecard(Integer matchId,
+                                                          Integer teamId,
+                                                          Integer innings){
 		    List<BallScore> balls =
 		            ballScoreRepository.findByMatch_MatchIdOrderByOverNoAscBallNoAsc(matchId);
 
@@ -254,6 +435,11 @@ public class ScoreCardService {
 		    Map<Integer, Integer> legalBallsMap = new HashMap<>();
 
 		    for (BallScore ball : balls) {
+		    	
+		    	if (!ball.getBowler().getTeam().getId().equals(teamId)
+		    	        || !ball.getInnings().equals(innings)) {
+		    	    continue;
+		    	}
 
 		        Integer bowlerId = ball.getBowler().getId();
 
@@ -264,16 +450,35 @@ public class ScoreCardService {
 		        dto.setPlayerId(bowlerId);
 		        dto.setPlayerName(ball.getBowler().getPlayerName());
 
-		        // Runs Conceded
+		        
+		     // Runs Conceded
+
 		        int runs = ball.getRuns() == null ? 0 : ball.getRuns();
 		        int extras = ball.getExtras() == null ? 0 : ball.getExtras();
 
+		        int conceded = 0;
+
+		        if (ball.getBallType() == BallType.NORMAL) {
+
+		            conceded = runs;
+
+		        } else if (ball.getBallType() == BallType.WIDE) {
+
+		            conceded = extras;
+
+		        } else if (ball.getBallType() == BallType.NO_BALL) {
+
+		            conceded = runs + extras;
+		        }
+
+		        // BYE and LEG_BYE do not count against the bowler
+
 		        dto.setRunsConceded(
 		            (dto.getRunsConceded() == null ? 0 : dto.getRunsConceded())
-		                + runs + extras
+		            + conceded
 		        );
 
-		        // Wickets
+		        
 		     // Wickets (Run Out should NOT count for bowler)
 		        if (ball.getWicketType() != null
 		                && !ball.getWicketType().name().equals("NOT_OUT")
@@ -315,4 +520,148 @@ public class ScoreCardService {
 		    return new ArrayList<>(bowlingMap.values());
 		}
 	
+	 public TeamScorecardDTO getTeamScorecard(Integer matchId, Integer teamId) {
+
+		    Match match = matchRepository.findById(matchId)
+		            .orElseThrow(() -> new RuntimeException("Match not found"));
+
+		    MatchState state = matchStateRepository.findByMatchMatchId(matchId)
+		            .orElseThrow(() -> new RuntimeException("Match state not found"));
+
+		    Integer firstBattingTeamId;
+		    Integer secondBattingTeamId;
+
+		    if (match.getElectedTo().equalsIgnoreCase("BAT")) {
+
+		        if (match.getTossWinner().equals(match.getTeam1().getTeamName())) {
+
+		            firstBattingTeamId = match.getTeam1().getId();
+		            secondBattingTeamId = match.getTeam2().getId();
+
+		        } else {
+
+		            firstBattingTeamId = match.getTeam2().getId();
+		            secondBattingTeamId = match.getTeam1().getId();
+		        }
+
+		    } else {
+
+		        // Toss winner chose to bowl
+
+		        if (match.getTossWinner().equals(match.getTeam1().getTeamName())) {
+
+		            firstBattingTeamId = match.getTeam2().getId();
+		            secondBattingTeamId = match.getTeam1().getId();
+
+		        } else {
+
+		            firstBattingTeamId = match.getTeam1().getId();
+		            secondBattingTeamId = match.getTeam2().getId();
+		        }
+		    }
+		    Integer innings;
+
+		    if (teamId.equals(firstBattingTeamId)) {
+
+		        innings = 1;
+
+		    } else {
+
+		        innings = 2;
+		    }
+
+		    Integer bowlingTeamId = match.getTeam1().getId().equals(teamId)
+		            ? match.getTeam2().getId()
+		            : match.getTeam1().getId();
+
+		    List<BallScore> balls =
+		            ballScoreRepository.findByMatch_MatchIdOrderByOverNoAscBallNoAsc(matchId);
+
+		    TeamScorecardDTO dto = new TeamScorecardDTO();
+
+		    // ✅ TEAM INFO
+		    if (match.getTeam1().getId().equals(teamId)) {
+		        dto.setTeamId(match.getTeam1().getId());
+		        dto.setTeamName(match.getTeam1().getTeamName());
+		    } else {
+		        dto.setTeamId(match.getTeam2().getId());
+		        dto.setTeamName(match.getTeam2().getTeamName());
+		    }
+
+		    int totalRuns = 0;
+		    int wickets = 0;
+		    int extras = 0;
+		    int legalBalls = 0;
+
+		    for (BallScore ball : balls) {
+
+		        // ✅ NULL SAFETY
+		        if (ball == null ||
+		            ball.getBatsman() == null ||
+		            ball.getBatsman().getTeam() == null ||
+		            ball.getInnings() == null) {
+		            continue;
+		        }
+
+		        // ✅ TEAM FILTER
+		        if (!ball.getBatsman().getTeam().getId().equals(teamId)) {
+		            continue;
+		        }
+
+		        // ✅ INNINGS FILTER (VERY IMPORTANT FIX)
+		        if (!ball.getInnings().equals(innings)) {
+		            continue;
+		        }
+
+		        int runs = ball.getRuns() == null ? 0 : ball.getRuns();
+		        int ex = ball.getExtras() == null ? 0 : ball.getExtras();
+
+		        totalRuns += runs;
+		        extras += ex;
+
+		        // Wickets
+		        if (ball.getWicketType() != null &&
+		            !ball.getWicketType().name().equals("NOT_OUT")) {
+		            wickets++;
+		        }
+
+		        // Legal balls
+		        if (ball.getBallType() == BallType.NORMAL ||
+		            ball.getBallType() == BallType.BYE ||
+		            ball.getBallType() == BallType.LEG_BYE) {
+		            legalBalls++;
+		        }
+		    }
+
+		    // ✅ FINAL CALCULATION
+		    if (innings == 1 && state.getInnings() == 2) {
+
+		        dto.setTotalRuns(
+		                state.getFirstInningsRuns() == null ? 0 : state.getFirstInningsRuns());
+
+		        dto.setWickets(
+		                state.getFirstInningsWickets() == null ? 0 : state.getFirstInningsWickets());
+
+		        int ball = state.getFirstInningsBalls() == null
+		                ? 0
+		                : state.getFirstInningsBalls();
+
+		        dto.setOvers((ball / 6) + "." + (ball % 6));
+
+		    } else {
+
+		        dto.setTotalRuns(totalRuns + extras);
+		        dto.setWickets(wickets);
+		        dto.setOvers((legalBalls / 6) + "." + (legalBalls % 6));
+
+		    }
+
+		    dto.setExtras(extras);
+		    
+		    // ✅ Batting + Bowling
+		    dto.setBatting(getBattingScorecard(matchId, teamId, innings));
+		    dto.setBowling(getBowlingScorecard(matchId, bowlingTeamId, innings));
+
+		    return dto;
+		}
 }

@@ -50,6 +50,17 @@ public class BallScoreController {
 	            .getBallScoreByMatchSorted(matchId);
 	}
 	
+	@GetMapping("/getBallScoreByMatchAndInnings/{matchId}/{innings}")
+	public List<BallScore> getBallScoreByMatchAndInnings(
+	        @PathVariable Integer matchId,
+	        @PathVariable Integer innings) {
+
+	    return ballScoreService.getBallScoreByMatchAndInnings(
+	            matchId,
+	            innings
+	    );
+	}
+	
 	@PutMapping("/updateBallScore/{id}")
 	public BallScore updateBallScore(@PathVariable Integer id,
 			                         @RequestBody BallScore ballScore) {
@@ -62,4 +73,13 @@ public class BallScoreController {
 		
 		return "BallScore Was Deleted Successfully";
 	}
+	
+	@GetMapping("/outPlayers/{matchId}/{innings}")
+	public List<Integer> getOutPlayers(
+	        @PathVariable Integer matchId,
+	        @PathVariable Integer innings) {
+
+	    return ballScoreService.getOutPlayers(matchId, innings);
+	}
+	
 }

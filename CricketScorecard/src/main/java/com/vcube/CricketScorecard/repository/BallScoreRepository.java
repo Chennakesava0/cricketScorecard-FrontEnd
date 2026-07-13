@@ -12,4 +12,11 @@ public interface BallScoreRepository extends JpaRepository<BallScore, Integer>{
 
 	 List<BallScore> findByMatch_MatchId(Integer matchId);
 	 
-	 List<BallScore> findByMatch_MatchIdOrderByOverNoAscBallNoAsc(Integer matchId);}
+	 List<BallScore> findByMatch_MatchIdOrderByOverNoAscBallNoAsc(Integer matchId);
+	 
+	 List<BallScore> findByMatch_MatchIdAndInningsOrderByOverNoAscBallNoAsc(
+	            Integer matchId,
+	            Integer innings
+	    );
+	 
+}

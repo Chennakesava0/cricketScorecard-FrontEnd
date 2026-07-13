@@ -1,19 +1,28 @@
 package com.vcube.CricketScorecard.service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.vcube.CricketScorecard.dto.MatchResultDTO;
 import com.vcube.CricketScorecard.enums.MatchStatus;
 import com.vcube.CricketScorecard.model.Match;
 import com.vcube.CricketScorecard.repository.MatchRepository;
+import com.vcube.CricketScorecard.repository.MatchStateRepository;
 
 @Service
 public class MatchService {
 
 	@Autowired
 	MatchRepository matchRepository;
+	
+	@Autowired
+	MatchStateRepository matchStateRepository;
+	
+	@Autowired
+	private ScoreCardService scoreCardService;
 
 	public Match saveMatch(Match match) {
 		return matchRepository.save(match);
@@ -36,8 +45,7 @@ public class MatchService {
 		match.setMatchDate(updateMatch.getMatchDate());
 		match.setMatchTime(updateMatch.getMatchTime());
 		match.setVenue(updateMatch.getVenue());
-		match.setTotalOvers(updateMatch.getTotalOvers());
-		 match.setTarget(updateMatch.getTarget()); 
+		match.setTotalOvers(updateMatch.getTotalOvers()); 
 		match.setStatus(updateMatch.getStatus());
 		match.setTossWinner(updateMatch.getTossWinner());
 		match.setElectedTo(updateMatch.getElectedTo());
@@ -64,7 +72,20 @@ public class MatchService {
 	    return matchRepository.findByStatus(MatchStatus.LIVE);
 	}
 
-	public List<Match> getCompletedMatches() {
-	    return matchRepository.findByStatus(MatchStatus.COMPLETED);
+	public List<MatchResultDTO> getCompletedMatches() {
+
+	    List<Match> matches =
+	            matchRepository.findByStatus(MatchStatus.COMPLETED);
+
+	    List<MatchResultDTO> result = new ArrayList<>();
+
+	    for (Match match : matches) {
+
+	    	MatchResultDTO dto = scoreCardService.getMatchResult(match.getMatchId());
+
+	        result.add(dto);
+	    }
+
+	    return result;
 	}
 }

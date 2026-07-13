@@ -1,5 +1,9 @@
 package com.vcube.CricketScorecard.dto;
 
+import java.util.List;
+
+import com.vcube.CricketScorecard.model.BallScore;
+
 import lombok.Data;
 
 @Data
@@ -53,4 +57,7 @@ public class LiveScoreDTO {
     private String bowlerOvers;
     private Integer bowlerRuns;
     private Integer bowlerWickets;
+    
+    private List<String> ballLog;
+    private List<java.util.Map<String, Object>> overBallLog;
 }

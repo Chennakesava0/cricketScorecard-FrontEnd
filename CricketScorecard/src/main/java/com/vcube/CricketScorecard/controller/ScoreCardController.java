@@ -13,6 +13,7 @@ import com.vcube.CricketScorecard.dto.BattingscorecardDTO;
 import com.vcube.CricketScorecard.dto.BowlingScorecardDTO;
 import com.vcube.CricketScorecard.dto.LiveScoreDTO;
 import com.vcube.CricketScorecard.dto.MatchResultDTO;
+import com.vcube.CricketScorecard.dto.TeamScorecardDTO;
 import com.vcube.CricketScorecard.service.LiveScoreService;
 import com.vcube.CricketScorecard.service.ScoreCardService;
 
@@ -32,18 +33,29 @@ public class ScoreCardController {
         return liveScoreService.getLiveScore(matchId);
     }
 
-    @GetMapping("/battingScorecard/{matchId}")
+   @GetMapping("/battingScorecard/{matchId}")
     public List<BattingscorecardDTO> getBattingScorecard(
-            @PathVariable Integer matchId) {
+            @PathVariable Integer matchId,
+            @RequestParam Integer teamId,
+            @RequestParam Integer innings) {
 
-        return scoreCardService.getBattingScorecard(matchId);
+        return scoreCardService.getBattingScorecard(matchId, teamId, innings);
     }
 
     @GetMapping("/bowlingScorecard/{matchId}")
     public List<BowlingScorecardDTO> getBowlingScorecard(
-            @PathVariable Integer matchId) {
+            @PathVariable Integer matchId,
+            @RequestParam Integer teamId,
+            @RequestParam Integer innings) {
 
-        return scoreCardService.getBowlingScorecard(matchId);
+        return scoreCardService.getBowlingScorecard(matchId, teamId, innings);
+    }
+    @GetMapping("/teamScorecard/{matchId}")
+    public TeamScorecardDTO getTeamScorecard(
+            @PathVariable Integer matchId,
+            @RequestParam Integer teamId) {
+
+        return scoreCardService.getTeamScorecard(matchId, teamId);
     }
 
     @GetMapping("/matchResult/{matchId}")

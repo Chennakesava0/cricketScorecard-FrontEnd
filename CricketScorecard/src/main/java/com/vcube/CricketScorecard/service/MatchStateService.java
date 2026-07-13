@@ -79,4 +79,23 @@ public class MatchStateService {
 
 	    return matchStateRepository.save(state);
 	}
+	
+	public MatchState completeMatch(Integer matchId) {
+
+	    MatchState state = matchStateRepository
+	            .findByMatchMatchId(matchId)
+	            .orElseThrow(() -> new RuntimeException("Match State Not Found"));
+
+	    Match match = matchRepository.findById(matchId)
+	            .orElseThrow(() -> new RuntimeException("Match Not Found"));
+
+	    // update state
+	    state.setMatchCompleted(true);
+
+	    // update match
+	    match.setStatus(MatchStatus.COMPLETED);
+
+	    matchRepository.save(match);
+	    return matchStateRepository.save(state);
+	}
 }

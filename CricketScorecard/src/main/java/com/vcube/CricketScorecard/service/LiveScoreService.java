@@ -1,5 +1,7 @@
 package com.vcube.CricketScorecard.service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ public class LiveScoreService {
 
     @Autowired
     private BallScoreRepository ballScoreRepository;
+    
+    @Autowired
+    private BallScoreService ballScoreService;
 
     public LiveScoreDTO getLiveScore(Integer matchId) {
 
@@ -46,9 +51,87 @@ public class LiveScoreService {
         MatchState matchState =
                 matchStateRepository.findByMatchMatchId(matchId).orElse(null);
         
-        List<BallScore> balls =
-                ballScoreRepository.findByMatch_MatchIdOrderByOverNoAscBallNoAsc(matchId);
+        if (matchState == null) {
+            return new LiveScoreDTO();
+        }
         
+        Integer innings = matchState.getInnings();
+        
+        
+        List<BallScore> balls =
+                ballScoreRepository.findByMatch_MatchIdAndInningsOrderByOverNoAscBallNoAsc(
+                        matchId,
+                        innings
+                );
+        
+        List<String> ballLog = balls.stream()
+                .map(ballScoreService::getBallLabel)
+                .toList();
+
+        dto.setBallLog(ballLog);
+       
+
+        /* ================= OVER WISE BALL LOG ================= */
+
+        List<java.util.Map<String, Object>> overBallLog = new ArrayList<>();
+
+        List<String> currentBalls = new ArrayList<>();
+        Integer currentOverNo = null;
+        int currentOverRuns = 0;
+
+        for (BallScore ball : balls) {
+
+            String label = ballScoreService.getBallLabel(ball);
+
+            int overNo = ball.getOverNo();
+
+            boolean isLegalBall =
+                    ball.getBallType() == BallType.NORMAL ||
+                    ball.getBallType() == BallType.BYE ||
+                    ball.getBallType() == BallType.LEG_BYE;
+
+            int runs =
+                    (ball.getRuns() == null ? 0 : ball.getRuns()) +
+                    (ball.getExtras() == null ? 0 : ball.getExtras());
+
+            // first over init
+            if (currentOverNo == null) {
+                currentOverNo = overNo;
+            }
+
+            // OVER CHANGE
+            if (!currentOverNo.equals(overNo)) {
+
+                java.util.Map<String, Object> overMap = new java.util.HashMap<>();
+                overMap.put("overNo", currentOverNo);
+                overMap.put("balls", new ArrayList<>(currentBalls));
+                overMap.put("runs", currentOverRuns);
+
+                overBallLog.add(overMap);
+
+                currentBalls.clear();
+                currentOverRuns = 0;
+                currentOverNo = overNo;
+            }
+
+         // Show every delivery
+            currentBalls.add(label);
+            
+            currentOverRuns += runs;
+        }
+
+        // ✅ FINAL OVER CLOSE (FIXED)
+        if (currentOverNo != null) {
+
+            java.util.Map<String, Object> overMap = new java.util.HashMap<>();
+            overMap.put("overNo", currentOverNo);
+            overMap.put("balls", new ArrayList<>(currentBalls));
+            overMap.put("runs", currentOverRuns);
+
+            overBallLog.add(overMap);
+        }
+
+        dto.setOverBallLog(overBallLog);
         
         if (matchState != null) {
         	
@@ -148,15 +231,28 @@ public class LiveScoreService {
                         ball.getBowler().getId().equals(bowler.getId())) {
 
                         // Runs conceded
-                        bowlerRuns +=
-                                (ball.getRuns() == null ? 0 : ball.getRuns()) +
-                                (ball.getExtras() == null ? 0 : ball.getExtras());
+                    	int conceded = 0;
 
+                    	int runs = ball.getRuns() == null ? 0 : ball.getRuns();
+                    	int extras = ball.getExtras() == null ? 0 : ball.getExtras();
+
+                    	if (ball.getBallType() == BallType.NORMAL) {
+                    	    conceded = runs;
+                    	} else if (ball.getBallType() == BallType.WIDE) {
+                    	    conceded = extras;
+                    	} else if (ball.getBallType() == BallType.NO_BALL) {
+                    	    conceded = runs + extras;
+                    	}
+                    	// BYE and LEG_BYE contribute 0 to bowler runs
+
+                    	bowlerRuns += conceded;
                         // Legal deliveries
-                        if (ball.getBallType() == BallType.NORMAL ||
-                            ball.getBallType() == BallType.BYE ||
-                            ball.getBallType() == BallType.LEG_BYE) {
+                        boolean isLegalBall =
+                                ball.getBallType() == BallType.NORMAL ||
+                                ball.getBallType() == BallType.BYE ||
+                                ball.getBallType() == BallType.LEG_BYE;
 
+                        if (isLegalBall) {
                             bowlerBalls++;
                         }
 
@@ -175,20 +271,22 @@ public class LiveScoreService {
 
                 dto.setBowlerWickets(bowlerWickets);
 
-                dto.setBowlerOvers((bowlerBalls / 6) + "." + (bowlerBalls % 6));
+                dto.setBowlerOvers(String.format("%d.%d", bowlerBalls / 6, bowlerBalls % 6));
             }
             
             dto.setInnings(matchState.getInnings());
             
 
-            Integer innings = (matchState != null) ? matchState.getInnings() : null;
+            if (innings == 1) {
 
-            if (innings != null && innings == 1) {
                 dto.setBattingTeam(match.getTeam1().getTeamName());
                 dto.setBowlingTeam(match.getTeam2().getTeamName());
+
             } else {
+
                 dto.setBattingTeam(match.getTeam2().getTeamName());
                 dto.setBowlingTeam(match.getTeam1().getTeamName());
+
             }
         }
 
@@ -248,7 +346,7 @@ public class LiveScoreService {
 
         dto.setTotalRuns(totalRuns);
         dto.setTotalWickets(totalWickets);
-        dto.setOvers((ballsBowled / 6) + "." + (ballsBowled % 6));
+        dto.setOvers(String.format("%d.%d", ballsBowled / 6, ballsBowled % 6));
         
         double crr = ballsBowled > 0
                 ? (totalRuns * 6.0) / ballsBowled

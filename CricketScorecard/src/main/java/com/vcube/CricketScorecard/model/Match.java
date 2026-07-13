@@ -46,7 +46,6 @@ public class Match {
 	
 	private Integer totalOvers;
 	
-	private Integer target;
 	
     private String tossWinner;
 

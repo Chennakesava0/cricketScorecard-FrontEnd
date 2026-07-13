@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.vcube.CricketScorecard.dto.MatchResultDTO;
 import com.vcube.CricketScorecard.model.Match;
 import com.vcube.CricketScorecard.service.MatchService;
 
@@ -66,7 +67,7 @@ public class MatchController {
 	}
 
 	@GetMapping("/getCompletedMatches")
-	public List<Match> getCompletedMatches() {
+	public List<MatchResultDTO> getCompletedMatches() {
 	    return matchService.getCompletedMatches();
 	}
 
