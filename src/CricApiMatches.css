@@ -1,0 +1,309 @@
+.cricapi-page {
+    min-height: 100vh;
+    padding: 30px;
+    background: #f5f7fb;
+}
+
+
+/* ================= HEADER ================= */
+
+.cricapi-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.cricapi-page-header h1 {
+    margin: 0;
+    font-size: 30px;
+}
+
+.cricapi-page-header p {
+    margin-top: 8px;
+    color: #6b7280;
+}
+
+
+/* ================= BACK BUTTON ================= */
+
+.back-button {
+    border: none;
+    padding: 11px 18px;
+    border-radius: 8px;
+    background: #1f2937;
+    color: white;
+    cursor: pointer;
+}
+
+.back-button:hover {
+    background: #111827;
+}
+
+
+/* ================= SUMMARY ================= */
+
+.cricapi-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 30px;
+}
+
+.summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+}
+
+.summary-card span {
+    display: block;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.summary-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 25px;
+}
+
+
+/* ================= SECTION ================= */
+
+.data-section {
+    background: white;
+    border-radius: 14px;
+    margin-bottom: 30px;
+    padding: 22px;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-title h2 {
+    margin: 0;
+}
+
+.section-title p {
+    margin-top: 6px;
+    color: #6b7280;
+}
+
+.count-badge {
+    background: #eef2ff;
+    color: #4338ca;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+/* ================= TABLE ================= */
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1100px;
+}
+
+th {
+    background: #f8fafc;
+    text-align: left;
+    padding: 13px;
+    font-size: 13px;
+    color: #475569;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+td {
+    padding: 14px 13px;
+    border-bottom: 1px solid #edf0f4;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+tbody tr:hover {
+    background: #f8fafc;
+}
+
+.selected-row {
+    background: #eefbf3 !important;
+}
+
+
+/* ================= API ID ================= */
+
+.api-id {
+    font-family: monospace;
+    font-size: 11px;
+    color: #64748b;
+}
+
+
+/* ================= FORMAT ================= */
+
+.format-badge {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+/* ================= STATUS ================= */
+
+.status {
+    display: inline-block;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.status.live {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status.completed {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status.completed {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+
+/* ================= ACTION ================= */
+
+.action-buttons {
+    display: flex;
+    gap: 7px;
+}
+
+.select-button {
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.select-button:hover {
+    background: #1d4ed8;
+}
+
+.delete-button {
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #dc2626;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.delete-button:hover {
+    background: #b91c1c;
+}
+
+
+/* ================= SELECTED INFO ================= */
+
+.selected-info {
+    background: white;
+    border-left: 5px solid #2563eb;
+    padding: 18px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.selected-info h3 {
+    margin-top: 0;
+}
+
+
+/* ================= EMPTY ================= */
+
+.empty-row {
+    text-align: center;
+    padding: 30px;
+    color: #94a3b8;
+}
+
+
+/* ================= LOADING ================= */
+
+.cricapi-loading {
+    min-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 900px) {
+
+    .cricapi-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .cricapi-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .cricapi-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .cricapi-page {
+        padding: 15px;
+    }
+
+}
+
+/* =========================================
+   LIVE MATCH ROW
+   ========================================= */
+
+.live-match-row {
+    background: #fff1f1;
+    border-left: 5px solid #e53935;
+}
+
+.live-match-row td {
+    font-weight: 600;
+}
+
+.live-match-row:hover {
+    background: #ffe1e1;
+}

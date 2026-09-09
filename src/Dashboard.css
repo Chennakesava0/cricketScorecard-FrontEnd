@@ -1,20 +1,759 @@
-.dashboard-card{
-    border: none;
-    border-radius: 15px;
+/* =========================================
+   DASHBOARD PAGE
+========================================= */
+
+.dashboard-page {
+    min-height: 100vh;
+
+    padding: 30px 45px 50px;
+
+    background: #f4f7fb;
+
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+
+/* =========================================
+   HEADER
+========================================= */
+
+.dashboard-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 25px 30px;
+
+    margin-bottom: 35px;
+
+    background: linear-gradient(
+        135deg,
+        #0f172a,
+        #172554
+    );
+
+    border-radius: 18px;
+
+    color: white;
+
+    box-shadow:
+        0 8px 25px rgba(15, 23, 42, 0.15);
+}
+
+
+.header-left {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+}
+
+
+.header-logo {
+
+    width: 65px;
+    height: 65px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    font-size: 34px;
+
+    background: rgba(255, 255, 255, 0.12);
+
+    border-radius: 16px;
+}
+
+
+.dashboard-header h1 {
+
+    margin: 0;
+
+    font-size: 30px;
+
+    font-weight: 700;
+}
+
+
+.dashboard-header p {
+
+    margin: 6px 0 0;
+
+    color: #cbd5e1;
+
+    font-size: 14px;
+}
+
+
+.header-badge {
+
+    padding: 9px 16px;
+
+    border-radius: 30px;
+
+    background: rgba(255, 255, 255, 0.1);
+
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================
+   SECTION HEADING
+========================================= */
+
+.section-heading {
+
+    margin-bottom: 20px;
+}
+
+
+.section-heading h2 {
+
+    margin: 0;
+
+    color: #0f172a;
+
+    font-size: 22px;
+}
+
+
+.section-heading p {
+
+    margin-top: 6px;
+
+    color: #64748b;
+
+    font-size: 14px;
+}
+
+
+/* =========================================
+   STAT GRID
+========================================= */
+
+.dashboard-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 20px;
+
+    margin-bottom: 35px;
+}
+
+
+/* =========================================
+   STAT CARD
+========================================= */
+
+.dashboard-stat-card {
+
+    position: relative;
+
+    min-height: 190px;
+
+    padding: 22px;
+
+    border-radius: 18px;
+
+    background: white;
+
     cursor: pointer;
-    transition: all 0.3s ease;
+
+    border: 1px solid #e2e8f0;
+
+    box-shadow:
+        0 5px 15px rgba(15, 23, 42, 0.06);
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
 }
 
-.dashboard-card:hover{
+
+.dashboard-stat-card:hover {
+
     transform: translateY(-5px);
+
+    box-shadow:
+        0 14px 30px rgba(15, 23, 42, 0.12);
 }
 
-.dashboard-card h5{
-    color: #555;
-    font-weight: 600;
+
+.stat-top {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
 }
 
-.dashboard-card h2{
-    color: #0d6efd;
-    font-weight: bold;
+
+.stat-icon {
+
+    width: 52px;
+    height: 52px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    font-size: 25px;
+
+    background: #eef2ff;
+}
+
+
+.card-arrow {
+
+    font-size: 22px;
+
+    color: #94a3b8;
+
+    transition: 0.2s;
+}
+
+
+.dashboard-stat-card:hover .card-arrow {
+
+    color: #2563eb;
+
+    transform: translateX(4px);
+}
+
+
+.stat-info {
+
+    margin-top: 25px;
+}
+
+
+.stat-info p {
+
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 14px;
+}
+
+
+.stat-info h2 {
+
+    margin: 5px 0;
+
+    font-size: 32px;
+
+    color: #0f172a;
+}
+
+
+.stat-info span {
+
+    font-size: 12px;
+
+    color: #64748b;
+}
+
+
+/* =========================================
+   CARD VARIATIONS
+========================================= */
+
+.teams .stat-icon {
+
+    background: #eff6ff;
+}
+
+
+.players .stat-icon {
+
+    background: #f5f3ff;
+}
+
+
+.matches .stat-icon {
+
+    background: #fff7ed;
+}
+
+
+.live .stat-icon {
+
+    background: #fef2f2;
+}
+
+
+.live {
+
+    border-top: 4px solid #ef4444;
+}
+
+
+.live-icon {
+
+    animation: pulseLive 1.8s infinite;
+}
+
+
+@keyframes pulseLive {
+
+    0% {
+        box-shadow:
+            0 0 0 0 rgba(239, 68, 68, 0.35);
+    }
+
+    70% {
+        box-shadow:
+            0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow:
+            0 0 0 0 rgba(239, 68, 68, 0);
+    }
+
+}
+
+
+/* =========================================
+   LIVE BADGE
+========================================= */
+
+.live-badge {
+
+    padding: 5px 10px;
+
+    border-radius: 20px;
+
+    background: #fee2e2;
+
+    color: #dc2626;
+
+    font-size: 10px;
+
+    font-weight: 700;
+}
+
+
+/* =========================================
+   CRICAPI SECTION
+========================================= */
+
+.cricapi-section {
+
+    margin-top: 5px;
+
+    margin-bottom: 20px;
+}
+
+
+/* =========================================
+   CRICAPI MAIN CARD
+========================================= */
+
+.cricapi-main-card {
+
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 30px;
+
+    padding: 30px 32px;
+
+    min-height: 145px;
+
+    background: linear-gradient(
+        135deg,
+        #ffffff 0%,
+        #f8fbff 55%,
+        #eef6ff 100%
+    );
+
+    border-radius: 20px;
+
+    border: 1px solid #bfdbfe;
+
+    cursor: pointer;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 8px 25px rgba(37, 99, 235, 0.08);
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+
+/* Decorative background */
+
+.cricapi-main-card::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 180px;
+    height: 180px;
+
+    right: 150px;
+    top: -80px;
+
+    border-radius: 50%;
+
+    background: rgba(59, 130, 246, 0.05);
+
+    pointer-events: none;
+}
+
+
+.cricapi-main-card::after {
+
+    content: "";
+
+    position: absolute;
+
+    width: 100px;
+    height: 100px;
+
+    right: 40px;
+    bottom: -55px;
+
+    border-radius: 50%;
+
+    background: rgba(37, 99, 235, 0.06);
+
+    pointer-events: none;
+}
+
+
+.cricapi-main-card:hover {
+
+    transform: translateY(-5px);
+
+    border-color: #60a5fa;
+
+    box-shadow:
+        0 18px 35px rgba(37, 99, 235, 0.14);
+}
+
+
+/* =========================================
+   LEFT SIDE
+========================================= */
+
+.cricapi-main-left {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 22px;
+
+    flex: 1;
+
+    position: relative;
+
+    z-index: 1;
+}
+
+
+.cricapi-main-icon {
+
+    width: 72px;
+    height: 72px;
+
+    flex-shrink: 0;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 20px;
+
+    font-size: 36px;
+
+    background: linear-gradient(
+        135deg,
+        #dbeafe,
+        #eff6ff
+    );
+
+    border: 1px solid #bfdbfe;
+
+    box-shadow:
+        0 6px 15px rgba(37, 99, 235, 0.08);
+}
+
+
+/* =========================================
+   CONTENT
+========================================= */
+
+.cricapi-main-content {
+
+    min-width: 0;
+}
+
+
+.cricapi-heading-row {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin-bottom: 6px;
+}
+
+
+.cricapi-heading-row h2 {
+
+    margin: 0;
+
+    color: #0f172a;
+
+    font-size: 22px;
+
+    font-weight: 700;
+}
+
+
+.api-status {
+
+    padding: 5px 9px;
+
+    border-radius: 20px;
+
+    background: #dcfce7;
+
+    color: #15803d;
+
+    border: 1px solid #bbf7d0;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.5px;
+}
+
+
+.cricapi-main-content p {
+
+    margin: 0 0 6px;
+
+    color: #475569;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+
+.cricapi-description {
+
+    color: #94a3b8;
+
+    font-size: 12px;
+}
+
+
+/* =========================================
+   RIGHT ACTION
+========================================= */
+
+.cricapi-main-right {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+
+    position: relative;
+
+    z-index: 1;
+}
+
+
+.cricapi-manage-text {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-end;
+
+    gap: 4px;
+}
+
+
+.cricapi-manage-text span {
+
+    color: #2563eb;
+
+    font-size: 14px;
+
+    font-weight: 700;
+}
+
+
+.cricapi-manage-text small {
+
+    color: #94a3b8;
+
+    font-size: 11px;
+}
+
+
+.cricapi-action-arrow {
+
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: #eff6ff;
+
+    border: 1px solid #dbeafe;
+
+    color: #2563eb;
+
+    font-size: 24px;
+
+    transition:
+        background 0.25s ease,
+        color 0.25s ease,
+        transform 0.25s ease;
+}
+
+
+.cricapi-main-card:hover
+.cricapi-action-arrow {
+
+    background: #2563eb;
+
+    color: white;
+
+    transform: translateX(5px);
+}
+
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1100px) {
+
+    .dashboard-grid {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+}
+
+
+@media (max-width: 700px) {
+
+    .dashboard-page {
+
+        padding: 20px;
+    }
+
+
+    .dashboard-header {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 20px;
+    }
+
+
+    .header-badge {
+
+        align-self: flex-start;
+    }
+
+
+    .dashboard-grid {
+
+        grid-template-columns: 1fr;
+    }
+
+
+    .cricapi-main-card {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 20px;
+
+        padding: 25px;
+    }
+
+
+    .cricapi-main-left {
+
+        align-items: flex-start;
+    }
+
+
+    .cricapi-main-right {
+
+        width: 100%;
+
+        justify-content: space-between;
+    }
+
+
+    .cricapi-manage-text {
+
+        align-items: flex-start;
+    }
+
+
+    .cricapi-heading-row {
+
+        flex-wrap: wrap;
+    }
+
 }

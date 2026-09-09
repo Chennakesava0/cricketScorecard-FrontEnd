@@ -16,6 +16,7 @@ import MatchSetup from './MatchSetup';
 import MatchScoring from './MatchScoring';
 import LiveMatchDetails from './LiveMatchDetalis';
 import Scorecard from './Scorecard';
+import CricApiMatches from './CricApiMatches';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
         <Route path='/live' element={<LiveMatches />} />
         <Route path='/completed' element={<CompletedMatches />} />
         <Route path='/result/:matchId' element={<MatchResult />} />
+        <Route path='/cricapi/matches' element={<CricApiMatches />} />
       </Routes>
     </BrowserRouter>
   );
